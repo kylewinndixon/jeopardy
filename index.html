@@ -43,6 +43,7 @@ textarea{resize:vertical;min-height:3.2em}
 .pl .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pl .n.off{opacity:.55}
 .pl button{padding:.2em .5em;background:transparent}
 .pl .s{box-shadow:inset 0 0 0 1px var(--b70);min-width:4.2em;font-variant-numeric:tabular-nums}
+#toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--illum);color:var(--black);padding:.6em 1.2em;border-radius:8px;font-weight:700;z-index:30;box-shadow:0 4px 16px #0008}
 .stat{text-align:center;font-weight:600;margin:.3rem 0}.stat.good{color:var(--pv)}.stat.warn{color:var(--poppy)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--pv);flex:none}.dot.off{background:var(--b70)}
 .mini{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}.mini button{padding:.3em .7em;font-size:.85rem}
@@ -124,6 +125,7 @@ const PEER_OPTS={config:{iceServers:ICE}};
 const $=s=>document.querySelector(s), app=$("#app");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,"0")).join("");
+function toast(m){const t=document.createElement("div");t.id="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
 const money=n=>(n<0?"−":"")+"$"+Math.abs(n);
 const bc="BroadcastChannel" in window?new BroadcastChannel("clubjep"):null;
 const RV={r1:100,r2:200};
@@ -202,7 +204,7 @@ const retry=ms=>{clearTimeout(rt);rt=setTimeout(startRoom,ms)};
 function setStatus(s){hostStatus=s;if($("#side"))renderSide()}
 function startRoom(){
   room=localStorage.jroom||(localStorage.jroom=Math.random().toString(36).slice(2,6));
-  if(peer&&!peer.destroyed)peer.destroy();
+  const old=peer;peer=null;if(old&&!old.destroyed)old.destroy();
   hostStatus="Connecting to server…";
   const me=peer=new Peer(PREFIX+room,PEER_OPTS);
   me.on("open",()=>{if(peer!==me)return;tries=0;setStatus("ok")});
@@ -271,6 +273,7 @@ function renderSide(){
   $("#side").innerHTML=`<h2 style="font-size:1.4rem">Join on your phone</h2>
   <div id="qrbox" title="Click to enlarge"></div><div class="url">${esc(joinUrl())}</div>
   <div class="stat ${hostStatus==="ok"?"good":"warn"}">${hostStatus==="ok"?"● Room online":"● "+esc(hostStatus)}</div>
+  <div class="mini" style="justify-content:center"><button class="ghost" id="rc">Reconnect</button><button class="ghost" id="nr">New room code</button></div>
   <h3 style="margin:1rem 0 .2rem">Players (${ps.filter(p=>p.online).length} online)</h3>
   <div class="mini"><button class="ghost" id="ap">+ Add</button><button class="ghost" id="lk">Lobby: ${locked?"locked":"open"}</button><button class="ghost" id="ro">Remove offline</button></div>
   ${ps.length?"":'<p class="mute">Nobody yet. Scan the code.</p>'}
@@ -284,9 +287,13 @@ function renderSide(){
   each("[data-rn]",b=>b.onclick=()=>{const o=b.dataset.rn,n=(prompt("New name for "+o,o)||"").trim().slice(0,16);if(!n||n===o||P[n])return;const p=P[o];delete P[o];p.name=n;P[n]=p;if(p.conn){p.conn.pname=n;if(p.conn.open)p.conn.send({t:"joined",name:n})}if(buzzer===o)buzzer=n;saveS();push();renderSide();renderPanel()});
   each("[data-rm]",b=>b.onclick=()=>{if(confirm("Remove "+b.dataset.rm+" from the lobby?"))kick(b.dataset.rm)});
   $("#ap").onclick=()=>{const n=(prompt("Player or team name")||"").trim().slice(0,16);if(n&&!P[n]){P[n]={name:n,score:0,online:false};saveS();push();renderSide()}};
+  $("#rc").onclick=()=>{tries=0;setStatus("Reconnecting…");retry(0);toast("Reconnecting the room…")};
+  $("#nr").onclick=()=>{if(!confirm("Create a new room code? Everyone connected is disconnected and must scan the new QR code."))return;
+    Object.values(P).forEach(p=>{if(p.conn&&p.conn.open){try{p.conn.send({t:"closed"})}catch(e){}}});
+    P={};phase="idle";cur=null;buzzer=null;fin={stage:null};localStorage.jroom=Math.random().toString(36).slice(2,6);tries=0;saveS();renderMain();retry(0);setStatus("Connecting to server…");toast("New room code: "+localStorage.jroom)};
   $("#lk").onclick=()=>{locked=!locked;renderSide()};
   $("#ro").onclick=()=>{const off=ps.filter(p=>!p.online);if(off.length&&confirm("Remove "+off.length+" offline player(s)? Their scores are lost."))off.forEach(p=>kick(p.name))};
-  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;saveS();push();renderSide();renderMain()}};
+  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;saveS();push();renderSide();renderMain();toast("Game reset: scores zeroed, board cleared")}};
   sync();
 }
 function kick(n){
@@ -462,6 +469,7 @@ function playerMode(code){
         if(m.t==="joined"){name=m.name;localStorage.jname=name;localStorage.jjoined="1";ui()}
         if(m.t==="s"){state=m;ui()}
         if(m.t==="kicked"){dead=true;localStorage.removeItem("jjoined");msgCard("You were removed","The host removed you from the game.")}
+        if(m.t==="closed"){dead=true;localStorage.removeItem("jjoined");msgCard("Room closed","The host started a new room. Scan the new QR code to join.")}
         if(m.t==="denied"){dead=true;msgCard("Lobby is closed","The host isn't accepting new players right now.")}
       });
       conn.on("close",()=>{if(dead)return;app.innerHTML=`<div class="center"><p>Reconnecting…</p></div>`;setTimeout(()=>{pr.destroy();connect()},1500)});
