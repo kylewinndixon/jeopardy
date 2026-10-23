@@ -77,8 +77,8 @@ button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
 .tvmain{padding:2.2vh 2vw 1.2vh;min-height:0;display:flex;flex-direction:column}
 .tvhead{font:600 min(2.2vw,3.6vh) "Source Serif 4",serif;color:var(--fog);margin-bottom:1.2vh;letter-spacing:.02em}
 .tvboard{flex:1;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:auto repeat(5,1fr);gap:.9vh .6vw;min-height:0}
-.tvcat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--black);padding:1.2vh .5vw;font:700 min(2.1vw,3.8vh)/1.1 "Source Serif 4",serif;border-radius:.4vh}
-.tvtile{display:grid;place-items:center;background:var(--cardinal);color:var(--illum);font:700 min(5vw,9vh) "Source Serif 4",serif;border-radius:.4vh}
+.tvcat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--black);padding:1.2vh .5vw;font:700 min(calc(12.6vw / var(--n,6)),3.8vh)/1.1 "Source Serif 4",serif;border-radius:.4vh}
+.tvtile{display:grid;place-items:center;background:var(--cardinal);color:var(--illum);font:700 min(calc(30vw / var(--n,6)),9vh) "Source Serif 4",serif;border-radius:.4vh}
 .tvtile.used{background:#3a3935;color:transparent}
 .tvbar{display:flex;align-items:center;gap:1.2vw;padding:1.4vh 2vw;background:#1f1e1b;border-top:.6vh solid var(--cardinal);min-height:16vh}
 .chip{flex:1;min-width:0;background:var(--b90);border-radius:.8vh;padding:1.2vh 1vw;text-align:center}
@@ -102,6 +102,16 @@ button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
 .names{display:flex;flex-wrap:wrap;gap:1vh 1vw;justify-content:center;max-width:80vw}
 .names span{background:var(--b90);padding:.6vh 1.2vw;border-radius:99px;font-size:min(1.8vw,3vh)}
 .tvtbl{font-size:min(1.9vw,3.4vh)}
+.runners{font:600 min(2vw,3.4vh) "Source Sans 3",sans-serif;color:var(--fog)}
+.podium{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:1.5vw;min-height:0;padding:0 6vw}
+.pod{flex:1;max-width:27vw;display:flex;flex-direction:column;align-items:center;padding-top:2vh;border-radius:1vh 1vh 0 0;text-align:center;overflow:hidden;color:var(--black)}
+.pod.p1{height:50vh;background:var(--illum)}.pod.p2{height:39vh;background:var(--fog)}.pod.p3{height:30vh;background:var(--poppy)}.pod.empty{background:none}
+.pn{font:700 min(3vw,5.4vh) "Source Serif 4",serif;padding:0 1vw;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ps{font:700 min(3.6vw,6.5vh) "Source Serif 4",serif}
+.pr{margin-top:auto;padding-bottom:1.5vh;font:700 min(5vw,9vh) "Source Serif 4",serif;opacity:.55}
+.runnerups{display:flex;gap:2vw;justify-content:center;padding:2.5vh 0 .5vh;min-height:9vh}
+.runner{display:flex;gap:1.2vw;align-items:baseline;background:var(--b90);padding:1.2vh 2vw;border-radius:1vh;font-size:min(2.2vw,4vh)}
+.rise{animation:rise .9s ease-out both}@keyframes rise{from{transform:translateY(60%);opacity:0}}
 </style>
 </head>
 <body>
@@ -120,11 +130,11 @@ const PASS_HASH="057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc8
 /* Paste your Firebase web-app config here (Project settings > Your apps > Web app).
    It's safe to keep in a public repo as long as you publish the database rules from firebase-rules.json. */
 const FIREBASE_CONFIG={
-  apiKey:"AIzaSyDAc-Ukm5Hij1_y0VYo-tjr37VUgHHbnWI",
-  authDomain:"spr-jeopardy.firebaseapp.com",
-  databaseURL:"https://spr-jeopardy-default-rtdb.firebaseio.com",
-  projectId:"spr-jeopardy",
-  appId:"1:1000199377284:web:ef9f34995fe9755d060dd1"
+  apiKey:"",
+  authDomain:"",
+  databaseURL:"",
+  projectId:"",
+  appId:""
 };
 /* ==================== */
 
@@ -137,7 +147,9 @@ const bc="BroadcastChannel" in window?new BroadcastChannel("clubjep"):null;
 const RV={r1:100,r2:200};
 
 /* ---------- data ---------- */
-const mk=()=>({dd:[],cats:Array.from({length:6},(_,i)=>({name:"Category "+(i+1),clues:Array.from({length:5},(_,j)=>({q:"Clue "+(j+1),a:"Answer "+(j+1)}))}))});
+const MAXC=8;
+const mkCat=i=>({name:"Category "+(i+1),clues:Array.from({length:5},(_,j)=>({q:"Clue "+(j+1),a:"Answer "+(j+1)}))});
+const mk=()=>({dd:[],cats:Array.from({length:6},(_,i)=>mkCat(i))});
 const blank=()=>({r1:mk(),r2:mk(),fin:{cat:"Final category",q:"Final clue",a:"Final answer"}});
 const csvEsc=v=>{v=String(v??"");return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
 function toCSV(D){
@@ -162,23 +174,25 @@ function fromCSV(t){
   const hdr=rows.shift().map(h=>h.trim().toLowerCase()),ix=n=>hdr.indexOf(n);
   if(ix("round")<0||ix("clue")<0||ix("answer")<0)throw new Error("Needs round, category, value, clue, answer columns.");
   const N=blank(),seen={r1:[],r2:[]},filled={r1:{},r2:{}};
-  N.r1.dd=[];N.r2.dd=[];
+  N.r1.dd=[];N.r2.dd=[];N.r1.cats=[];N.r2.cats=[];
   rows.forEach(r=>{
     const g=n=>(r[ix(n)]??"").trim(),rd=g("round").toLowerCase();
     if(rd.startsWith("f")){N.fin={cat:g("category")||N.fin.cat,q:r[ix("clue")]??"",a:r[ix("answer")]??""};return}
     const k=/2/.test(rd)?"r2":"r1",name=g("category");
-    let ci=seen[k].indexOf(name);if(ci<0){if(seen[k].length>=6)return;seen[k].push(name);ci=seen[k].length-1;N[k].cats[ci].name=name;filled[k][ci]={}}
+    let ci=seen[k].indexOf(name);if(ci<0){if(seen[k].length>=MAXC)return;seen[k].push(name);ci=seen[k].length-1;N[k].cats.push(mkCat(ci));N[k].cats[ci].name=name;filled[k][ci]={}}
     let j=Math.round(+g("value")/RV[k])-1;
     if(!(j>=0&&j<5)||filled[k][ci][j]){j=0;while(j<5&&filled[k][ci][j])j++;if(j>4)return}
     filled[k][ci][j]=1;N[k].cats[ci].clues[j]={q:r[ix("clue")]??"",a:r[ix("answer")]??""};
     if(/^(y|1|t|x|d)/i.test(g("daily_double")))N[k].dd.push(ci+"-"+j);
   });
+  ["r1","r2"].forEach(k=>{if(!N[k].cats.length)N[k].cats.push(mkCat(0))});
   return N;
 }
 
 /* ======================= HOST CONSOLE ======================= */
 let D,S={},U,P={},phase="idle",buzzer=null,out=new Set(),cur=null,dd={},tvAns=false,fin={stage:null};
 let started=false,locked=false,tab="r1",round="r1",etab="r1",peer,room,tries=0;
+let podium=false,openedAt=0,hostOff=0;
 function hostLoad(){
   try{D=JSON.parse(localStorage.jdata)}catch(e){}
   D=D||blank();["r1","r2"].forEach(k=>D[k].dd=D[k].dd||[]);
@@ -226,11 +240,13 @@ async function startRoom(){
     const hu=(await R.child("hostUid").once("value")).val();
     if(hu&&hu!==uid){localStorage.jroom=newCode();return startRoom()}
     if(!hu)await R.child("hostUid").set(uid);
+    if((await R.child("hostUid").once("value")).val()!==uid)throw new Error("Couldn't claim the room. Check the database rules were published.");
     const [ps,stt]=await Promise.all([R.child("players").once("value"),R.child("state").once("value")]);
     win=(stt.val()&&stt.val().win)||0;
     Object.entries(ps.val()||{}).forEach(([id,v])=>{const p=P[v.name]||(P[v.name]={name:v.name,online:false});p.id=id;p.score=v.score||0});
     hostReady=true;
     lis(fbdb.ref(".info/connected"),"value",s=>{if(s.val()){R.child("hostOnline").onDisconnect().remove();R.child("hostOnline").set(true);setStatus("ok")}else setStatus("Offline. Reconnecting…")});
+    lis(fbdb.ref(".info/serverTimeOffset"),"value",s=>{hostOff=s.val()||0});
     lis(R.child("joins"),"child_added",s=>onJoin(s.key,s.val()));
     lis(R.child("joins"),"child_changed",s=>onJoin(s.key,s.val()));
     lis(R.child("presence"),"value",s=>{const o=s.val()||{};Object.values(P).forEach(p=>{if(p.id&&!isMan(p))p.online=!!o[p.id]});renderSide()});
@@ -262,12 +278,13 @@ function applyAnswers(o){
 const ddMax=p=>Math.max(p.score,cur?RV[cur.r]*5:0);
 function computeBuzz(){
   buzzList=Object.entries(buzzSnap||{}).map(([id,v])=>({p:byId(id),v})).filter(x=>x.p&&x.v&&x.v.w===win&&!out.has(x.p.name)).map(x=>({name:x.p.name,t:x.v.t})).sort((a,b)=>a.t-b.t);
+  buzzList.forEach(b=>{b.d=b.t-buzzList[0].t;b.r=Math.max(0,b.t-openedAt)});
 }
 function evalBuzz(){
   if(!cur||cur.dd||(phase!=="open"&&phase!=="buzzed"))return;
   computeBuzz();
   if(phase==="open"&&buzzList.length&&!settleT)settleT=setTimeout(()=>{settleT=null;if(phase!=="open")return;computeBuzz();if(!buzzList.length)return;buzzer=buzzList[0].name;phase="buzzed";push();renderSide();renderPanel()},GRACE_MS);
-  renderPanel();
+  renderPanel();sync();
 }
 function clearRound(all){
   clearTimeout(settleT);settleT=null;buzzSnap={};buzzList=[];
@@ -291,7 +308,7 @@ function tvState(){
   const online=ps.filter(p=>p.online);
   return {started,url:joinUrl(),names:ps.map(p=>p.name),
     round,rname:round==="r1"?"Round 1":"Round 2",cats:R.cats.map(c=>c.name),used:U[round],vals:[1,2,3,4,5].map(j=>RV[round]*j),
-    top:ps.slice(0,5).map(p=>({n:p.name,s:p.score})),more:Math.max(0,ps.length-5),phase,buzzer,
+    top:ps.slice(0,5).map(p=>({n:p.name,s:p.score})),more:Math.max(0,ps.length-5),phase,buzzer,podium,runners:phase==="buzzed"?buzzList.slice(1,4).map(b=>({n:b.name,d:b.d})):[],
     cur:cur&&{cat:cat.name,val,dd:cur.dd,ddWho:dd.who,ddStage:dd.stage,q:(cur.dd&&dd.stage!=="clue")?"":cl.q,a:tvAns?cl.a:""},
     fin:phase==="final"?{stage:fin.stage,cat:D.fin.cat,q:fin.stage!=="cat"?D.fin.q:"",a:fin.stage==="reveal"?D.fin.a:"",
       nw:online.filter(p=>p.wager!=null).length,na:online.filter(p=>p.fans!=null).length,no:online.length,
@@ -326,7 +343,7 @@ function renderSide(){
     detach();P={};phase="idle";cur=null;buzzer=null;fin={stage:null};out=new Set();localStorage.jroom=newCode();saveS();renderMain();startRoom();toast("New room code: "+localStorage.jroom)};
   $("#lk").onclick=()=>{locked=!locked;renderSide()};
   $("#ro").onclick=()=>{const off=ps.filter(p=>!p.online);if(off.length&&confirm("Remove "+off.length+" offline player(s)? Their scores are lost."))off.forEach(p=>kick(p.name))};
-  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;clearRound(true);saveS();push();renderSide();renderMain();toast("Game reset: scores zeroed, board cleared")}};
+  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;podium=false;clearRound(true);saveS();push();renderSide();renderMain();toast("Game reset: scores zeroed, board cleared")}};
   sync();
 }
 function kick(n){
@@ -341,11 +358,11 @@ function kick(n){
 function renderMain(){
   const m=$("#main"),tabs=[["r1","Round 1"],["r2","Round 2"],["fin","Final Jeopardy"],["edit","Editor"]];
   m.innerHTML=`<div class="bar">${tabs.map(([k,l])=>`<button class="${tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}<span class="sp"></span>
-  <button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div>${FIREBASE_CONFIG.apiKey?"":`<div class="card" style="width:100%;margin-bottom:1rem"><b>Firebase isn't set up yet.</b> Phones can't join until you paste your Firebase config into <code>FIREBASE_CONFIG</code> near the top of index.html and commit it.</div>`}<div id="panel"></div><div id="body"></div>`;
+  <button class="ghost" id="pb">${podium?"Hide podium":"Show final podium"}</button><button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div>${FIREBASE_CONFIG.apiKey?"":`<div class="card" style="width:100%;margin-bottom:1rem"><b>Firebase isn't set up yet.</b> Phones can't join until you paste your Firebase config into <code>FIREBASE_CONFIG</code> near the top of index.html and commit it.</div>`}<div id="panel"></div><div id="body"></div>`;
   const b=$("#body");
   if(tab==="r1"||tab==="r2"){
     const R=D[tab];
-    b.innerHTML=`<div class="board">${R.cats.map(c=>`<div class="cat">${esc(c.name)}</div>`).join("")}${
+    b.innerHTML=`<div class="board" style="grid-template-columns:repeat(${R.cats.length},1fr)">${R.cats.map(c=>`<div class="cat">${esc(c.name)}</div>`).join("")}${
       [0,1,2,3,4].map(j=>R.cats.map((c,i)=>{const u=U[tab][i+"-"+j],star=R.dd.includes(i+"-"+j);return `<button class="tile ${u?"used":""}" data-c="${i}" data-j="${j}" ${u?"disabled":""}>$${RV[tab]*(j+1)}${star&&!u?'<span class="star" title="Daily Double (host only)">★</span>':""}</button>`}).join("")).join("")}</div>
     <p class="mute" style="margin-top:.8rem">Click a tile to open it. The ★ marks a Daily Double and only shows here, never on the TV.</p>`;
   }else if(tab==="fin"){
@@ -354,13 +371,14 @@ function renderMain(){
   m.querySelectorAll("[data-tab]").forEach(x=>x.onclick=()=>{tab=x.dataset.tab;if(tab==="r1"||tab==="r2")round=tab;renderMain()});
   b.querySelectorAll(".tile:not(.used)").forEach(x=>x.onclick=()=>openClue(+x.dataset.c,+x.dataset.j));
   $("#tvb").onclick=()=>window.open(location.pathname+"?tv","jeopardy-tv","popup,width=1280,height=720");
+  $("#pb").onclick=()=>{podium=!podium;renderMain()};
   $("#gb").onclick=()=>{started=!started;saveS();renderMain()};
   if($("#sf"))$("#sf").onclick=()=>{Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});started=true;saveS();phase="final";fin={stage:"cat"};cur=null;clearRound(true);push();renderMain()};
   renderPanel();sync();
 }
 function openClue(c,j){
   cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={who:null,stage:"pick"};clearRound(true);
-  phase=cur.dd?"dd":"locked";started=true;saveS();push();renderPanel();renderMain();
+  phase=cur.dd?"dd":"locked";started=true;podium=false;saveS();push();renderPanel();renderMain();
 }
 function closeClue(used){
   if(used&&cur)U[cur.r][cur.c+"-"+cur.j]=1;
@@ -371,7 +389,7 @@ const curVal=()=>RV[cur.r]*(cur.j+1);
 function judge(name,ok){
   const p=P[name];if(!p)return;
   if(ok){p.score+=curVal();closeClue(true);return}
-  p.score-=curVal();out.add(name);buzzer=null;if(phase==="buzzed"){win++;clearRound();phase="open"}
+  p.score-=curVal();out.add(name);buzzer=null;if(phase==="buzzed"){win++;clearRound();openedAt=Date.now()+hostOff;phase="open"}
   saveS();push();renderSide();renderPanel();
 }
 function ddJudge(ok){const p=P[dd.who];if(!p)return;const w=Math.max(0,+$("#ddw").value||0);p.score+=ok?w:-w;closeClue(true)}
@@ -393,12 +411,12 @@ function renderPanel(){
     if(phase==="locked")mid=`<div class="ctl"><button class="primary" id="ob">Open buzzers</button></div>`;
     if(phase==="open")mid=`<div class="ctl"><span>Buzzers open…</span><button id="lb">Lock buzzers</button></div>`;
     if(phase==="buzzed")mid=`<div class="ctl"><span class="who">${esc(buzzer)}</span><button class="ok" id="ok">Correct +${val}</button><button class="bad" id="no">Incorrect −${val}</button></div>`;
-    if(buzzList.length)mid+=`<div class="mute">Buzz order: ${buzzList.map((b,i)=>esc(b.name)+(i?` (+${b.t-buzzList[0].t} ms)`:"")).join(" · ")}</div>`;
+    if(buzzList.length)mid+=`<table><tr><th>#</th><th>Player</th><th>Behind 1st</th><th>Time after open</th></tr>${buzzList.map((b,i)=>`<tr><td>${i+1}</td><td>${esc(b.name)}</td><td>${i?"+"+b.d+" ms":"first"}</td><td>${b.r} ms</td></tr>`).join("")}</table>`;
     mid+=`<div class="ctl"><span class="mute">Judge someone else:</span><select id="mp">${ps.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select><button class="ok" id="mok">✓</button><button class="bad" id="mno">✗</button></div>`;
   }
   el.innerHTML=head+mid+foot;
   const on=(id,f)=>$(id)&&($(id).onclick=f);
-  on("#ob",()=>{clearRound();win++;phase="open";push();renderSide();renderPanel()});
+  on("#ob",()=>{clearRound();win++;openedAt=Date.now()+hostOff;phase="open";push();renderSide();renderPanel()});
   on("#lb",()=>{clearTimeout(settleT);settleT=null;phase="locked";push();renderPanel()});
   on("#ok",()=>judge(buzzer,true));on("#no",()=>judge(buzzer,false));
   on("#mok",()=>judge($("#mp").value,true));on("#mno",()=>judge($("#mp").value,false));
@@ -429,7 +447,28 @@ function editorHTML(){
   <p class="mute" style="margin:-.4rem 0 1rem">Edits save automatically in this browser. Export a CSV to back them up or edit in a spreadsheet. Commit it to your repo as <b>questions.csv</b> to load it on any computer.</p>`;
   if(etab==="fin")return h+`<div class="ed"><div class="c"><label>Category</label><input data-k="fin" data-f="cat" value="${esc(D.fin.cat)}"><label>Clue</label><textarea data-k="fin" data-f="q">${esc(D.fin.q)}</textarea><label>Answer</label><input data-k="fin" data-f="a" value="${esc(D.fin.a)}"></div></div>`;
   const k=etab;
-  return h+`<div class="ed">${D[k].cats.map((c,i)=>`<div class="c"><input class="nm" data-k="${k}" data-c="${i}" data-f="name" value="${esc(c.name)}" aria-label="Category name">${c.clues.map((x,j)=>`<div class="lrow"><label>$${RV[k]*(j+1)}</label><button class="dd ${D[k].dd.includes(i+"-"+j)?"on":""}" data-dd="${i}-${j}" aria-pressed="${D[k].dd.includes(i+"-"+j)}">★ Daily Double</button></div><textarea data-k="${k}" data-c="${i}" data-j="${j}" data-f="q" aria-label="Clue">${esc(x.q)}</textarea><input data-k="${k}" data-c="${i}" data-j="${j}" data-f="a" value="${esc(x.a)}" placeholder="Answer" aria-label="Answer">`).join("")}</div>`).join("")}</div>`;
+  h+=`<div class="bar"><label style="display:flex;align-items:center;gap:.5rem">Categories (columns)<input id="nc" type="number" min="1" max="${MAXC}" value="${D[k].cats.length}" style="width:5em"></label><button class="ghost" id="ac" ${D[k].cats.length>=MAXC?"disabled":""}>+ Add category</button></div>`;
+  return h+`<div class="ed">${D[k].cats.map((c,i)=>`<div class="c"><div class="lrow"><span class="mute">Category ${i+1}</span><button class="dd" data-rc="${i}">✕ Remove</button></div><input class="nm" data-k="${k}" data-c="${i}" data-f="name" value="${esc(c.name)}" aria-label="Category name">${c.clues.map((x,j)=>`<div class="lrow"><label>$${RV[k]*(j+1)}</label><button class="dd ${D[k].dd.includes(i+"-"+j)?"on":""}" data-dd="${i}-${j}" aria-pressed="${D[k].dd.includes(i+"-"+j)}">★ Daily Double</button></div><textarea data-k="${k}" data-c="${i}" data-j="${j}" data-f="q" aria-label="Clue">${esc(x.q)}</textarea><input data-k="${k}" data-c="${i}" data-j="${j}" data-f="a" value="${esc(x.a)}" placeholder="Answer" aria-label="Answer">`).join("")}</div>`).join("")}</div>`;
+}
+function removeCat(k,i){
+  const R=D[k];if(R.cats.length<=1){alert("A board needs at least one category.");return}
+  if(!confirm('Remove category "'+R.cats[i].name+'" and its clues?'))return;
+  R.cats.splice(i,1);
+  const mp=s=>{const [c,j]=s.split("-").map(Number);return c===i?null:(c>i?(c-1)+"-"+j:s)};
+  R.dd=R.dd.map(mp).filter(Boolean);
+  const nu={};Object.keys(U[k]).forEach(s=>{const m=mp(s);if(m)nu[m]=1});U[k]=nu;
+  saveD();saveS();renderMain();
+}
+function setCols(k,n){
+  const R=D[k];n=Math.max(1,Math.min(MAXC,Math.floor(n)||R.cats.length));
+  if(n<R.cats.length){
+    const d=R.cats.length-n;
+    if(!confirm("Remove the last "+d+" categor"+(d>1?"ies":"y")+" and their clues?")){renderMain();return}
+    R.cats.length=n;R.dd=R.dd.filter(s=>+s.split("-")[0]<n);
+    const nu={};Object.keys(U[k]).forEach(s=>{if(+s.split("-")[0]<n)nu[s]=1});U[k]=nu;saveS();
+  }
+  while(R.cats.length<n)R.cats.push(mkCat(R.cats.length));
+  saveD();renderMain();
 }
 function bindEditor(){
   const b=$("#body");
@@ -438,6 +477,9 @@ function bindEditor(){
     else if(d.f==="name")D[d.k].cats[+d.c].name=e.target.value;
     else D[d.k].cats[+d.c].clues[+d.j][d.f]=e.target.value;
     saveD();sync()};
+  if($("#nc"))$("#nc").onchange=e=>setCols(etab,+e.target.value);
+  if($("#ac"))$("#ac").onclick=()=>{const a=D[etab].cats;if(a.length<MAXC){a.push(mkCat(a.length));saveD();renderMain()}};
+  b.querySelectorAll("[data-rc]").forEach(x=>x.onclick=()=>removeCat(etab,+x.dataset.rc));
   b.querySelectorAll("[data-et]").forEach(x=>x.onclick=()=>{etab=x.dataset.et;renderMain()});
   b.querySelectorAll("[data-dd]").forEach(x=>x.onclick=()=>{const a=D[etab].dd,v=x.dataset.dd,i=a.indexOf(v);i<0?a.push(v):a.splice(i,1);x.classList.toggle("on",i<0);x.setAttribute("aria-pressed",i<0);saveD()});
   $("#ex").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([toCSV(D)],{type:"text/csv"}));a.download="questions.csv";a.click()};
@@ -447,7 +489,16 @@ function bindEditor(){
 }
 
 /* ======================= TV DISPLAY ======================= */
-let TS=null,lastQR="";
+let TS=null,lastQR="",podShown=false;
+function podiumHTML(s){
+  const first=!podShown;podShown=true;
+  const L=s.top,rk=[];L.forEach((p,i)=>rk.push(i&&p.s===L[i-1].s?rk[i-1]:i+1));
+  const ord=n=>n+((n%100>=11&&n%100<=13)?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
+  if(!L.length)return `<div class="tvlobby"><h1 class="serif">Final standings</h1><p class="mute">No players yet.</p></div>`;
+  const slot=(i,cls)=>L[i]?`<div class="pod ${cls}${first?" rise":""}"><div class="pn">${esc(L[i].n)}</div><div class="ps">${money(L[i].s)}</div><div class="pr">${ord(rk[i])}</div></div>`:`<div class="pod empty"></div>`;
+  const rest=L.slice(3).map((p,k)=>`<div class="runner"><span>${ord(rk[k+3])}</span><b>${esc(p.n)}</b><span>${money(p.s)}</span></div>`).join("");
+  return `<div class="tvhead" style="text-align:center">Final standings</div><div class="podium">${slot(1,"p2")}${slot(0,"p1")}${slot(2,"p3")}</div><div class="runnerups">${rest}</div>`;
+}
 function tvMode(){
   if(!bc){app.innerHTML=`<div class="center"><p>This browser can't link the TV window to the host console.</p></div>`;return}
   bc.onmessage=e=>{if(e.data&&typeof e.data==="object"){TS=e.data;renderTV()}};
@@ -458,7 +509,9 @@ function renderTV(){
   const s=TS;
   if(!s){app.innerHTML=`<div id="tv"><div class="tvmain"><div class="tvlobby"><h1 class="serif">Waiting for the host console…</h1><p class="mute">Open the host page in another window on the same browser, then click "Open TV display". Press F here for full screen.</p></div></div></div>`;return}
   let main="",bar=true,big=false;
-  if(!s.started){
+  if(!s.podium)podShown=false;
+  if(s.podium){bar=false;main=podiumHTML(s)}
+  else if(!s.started){
     bar=false;big=true;
     main=`<div class="tvlobby"><h1 class="serif">Scan to join the game</h1><div id="tvqrbig"></div><div class="tvurl">${esc(s.url)}</div>
     <div class="names">${s.names.map(n=>`<span>${esc(n)}</span>`).join("")}</div><div class="mute">${s.names.length?s.names.length+" joined":"Waiting for players…"}</div></div>`;
@@ -472,9 +525,9 @@ function renderTV(){
     const c=s.cur;
     if(c.dd&&c.ddStage!=="clue")main=`<div class="tvclue"><div class="splash">Daily Double</div><div class="meta">${esc(c.cat)}</div><div class="meta">${c.ddWho?esc(c.ddWho)+" is wagering…":"Selecting a player…"}</div></div>`;
     else main=`<div class="tvclue"><div class="meta">${esc(c.cat)} · $${c.val}${c.dd?" · Daily Double":""}</div><div class="q">${esc(c.q)}</div>${c.a?`<div class="a">${esc(c.a)}</div>`:""}
-      ${!c.dd&&s.phase==="open"?`<div class="live">Buzzers open</div>`:""}${!c.dd&&s.phase==="buzzed"?`<div class="live who">${esc(s.buzzer)}</div>`:""}${c.dd?`<div class="meta">${esc(c.ddWho||"")}</div>`:""}</div>`;
+      ${!c.dd&&s.phase==="open"?`<div class="live">Buzzers open</div>`:""}${!c.dd&&s.phase==="buzzed"?`<div class="live who">${esc(s.buzzer)}</div>`+((s.runners||[]).length?`<div class="runners">${s.runners.map((r,i)=>["2nd","3rd","4th"][i]+" "+esc(r.n)+" +"+r.d+" ms").join("  ·  ")}</div>`:""):""}${c.dd?`<div class="meta">${esc(c.ddWho||"")}</div>`:""}</div>`;
   }else{
-    main=`<div class="tvhead">${s.rname}</div><div class="tvboard">${s.cats.map(n=>`<div class="tvcat">${esc(n)}</div>`).join("")}${
+    main=`<div class="tvhead">${s.rname}</div><div class="tvboard" style="--n:${s.cats.length};grid-template-columns:repeat(${s.cats.length},1fr)">${s.cats.map(n=>`<div class="tvcat">${esc(n)}</div>`).join("")}${
       [0,1,2,3,4].map(j=>s.cats.map((_,i)=>`<div class="tvtile ${s.used[i+"-"+j]?"used":""}">${s.used[i+"-"+j]?"":"$"+s.vals[j]}</div>`).join("")).join("")}</div>`;
   }
   const scorebar=bar?`<div class="tvbar">${s.top.length?s.top.map((t,i)=>`<div class="chip ${i===0&&t.s>0?"lead":""}"><span class="cn">${esc(t.n)}</span><span class="cs">${money(t.s)}</span></div>`).join(""):`<div class="chip empty">No players yet</div>`}${s.more?`<div class="more">+${s.more} more</div>`:""}<div id="tvqr" title="Scan to join"></div></div>`:"";
@@ -536,7 +589,7 @@ function playerMode(code){
       if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
       uid=(await firebase.auth().signInAnonymously()).user.uid;
       db=firebase.database();R=db.ref("rooms/"+code);
-      if(!(await R.child("hostUid").once("value")).exists())return card("Room not found","Check the QR code, or ask the host for the current link.","Try again",start);
+      if(!(await R.child("hostUid").once("value")).exists())return card("Room not found","Looking for room <b>"+esc(code)+"</b>. Make sure the host console is open and unlocked, with “Room online” showing, and that you scanned its current QR code.","Try again",start);
       if(!attached){attached=true;
         db.ref(".info/serverTimeOffset").on("value",s=>off=s.val()||0);
         db.ref(".info/connected").on("value",s=>{if(s.val()){const pr=R.child("presence/"+uid);pr.onDisconnect().remove();pr.set(true)}});
