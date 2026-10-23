@@ -134,6 +134,8 @@ const FIREBASE_CONFIG={
   authDomain:"spr-jeopardy.firebaseapp.com",
   databaseURL:"https://spr-jeopardy-default-rtdb.firebaseio.com",
   projectId:"spr-jeopardy",
+  storageBucket:"spr-jeopardy.firebasestorage.app",
+  messagingSenderId:"1000199377284",
   appId:"1:1000199377284:web:ef9f34995fe9755d060dd1"
 };
 /* ==================== */
@@ -145,6 +147,8 @@ function toast(m){const t=document.createElement("div");t.id="toast";t.textConte
 const money=n=>(n<0?"−":"")+"$"+Math.abs(n);
 const bc="BroadcastChannel" in window?new BroadcastChannel("clubjep"):null;
 const RV={r1:100,r2:200};
+const BUILD="2026-10-22-podium2";
+const ordn=n=>n+((n%100>=11&&n%100<=13)?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
 
 /* ---------- data ---------- */
 const MAXC=8;
@@ -192,7 +196,12 @@ function fromCSV(t){
 /* ======================= HOST CONSOLE ======================= */
 let D,S={},U,P={},phase="idle",buzzer=null,out=new Set(),cur=null,dd={},tvAns=false,fin={stage:null};
 let started=false,locked=false,tab="r1",round="r1",etab="r1",peer,room,tries=0;
-let podium=false,openedAt=0,hostOff=0;
+let podium=false,openedAt=0,hostOff=0,tvAt=0,tvBuild="";
+function updTv(){const el=$("#tvind");if(!el)return;const ok=Date.now()-tvAt<6000,cur_=ok&&tvBuild===BUILD;el.textContent=!ok?"● TV window not detected":(cur_?"● TV window connected":"● TV window is out of date, refresh it");el.style.color=cur_?"var(--pv)":"var(--poppy)"}
+function podiumPreview(){
+  const ps=Object.values(P).sort((a,b)=>b.score-a.score).slice(0,5),rk=[];ps.forEach((p,i)=>rk.push(i&&p.score===ps[i-1].score?rk[i-1]:i+1));
+  return `<div class="card" style="width:100%;margin-bottom:1rem"><b>Final podium is showing on the TV window.</b>${ps.length?ps.map((p,i)=>`<div>${ordn(rk[i])} &nbsp; ${esc(p.name)} &nbsp; ${money(p.score)}</div>`).join(""):"<div class=\"mute\">No players yet.</div>"}</div>`;
+}
 function hostLoad(){
   try{D=JSON.parse(localStorage.jdata)}catch(e){}
   D=D||blank();["r1","r2"].forEach(k=>D[k].dd=D[k].dd||[]);
@@ -215,7 +224,7 @@ function lockScreen(){
 function hostInit(){
   hostLoad();
   app.innerHTML=`<div id="host"><div id="main"></div><aside id="side"></aside></div><div id="ov"></div>`;
-  if(bc)bc.onmessage=e=>{if(e.data==="hello")sync()};
+  if(bc){bc.onmessage=e=>{const d=e.data;if(d==="hello")sync();else if(d&&d.ack){tvAt=Date.now();tvBuild=d.ack;updTv()}};setInterval(updTv,2000)}
   if(!localStorage.jdata)fetch("questions.csv",{cache:"no-store"}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{D=fromCSV(t);saveD();renderMain()}).catch(()=>{});
   startRoom();renderSide();renderMain();
 }
@@ -358,7 +367,7 @@ function kick(n){
 function renderMain(){
   const m=$("#main"),tabs=[["r1","Round 1"],["r2","Round 2"],["fin","Final Jeopardy"],["edit","Editor"]];
   m.innerHTML=`<div class="bar">${tabs.map(([k,l])=>`<button class="${tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}<span class="sp"></span>
-  <button class="ghost" id="pb">${podium?"Hide podium":"Show final podium"}</button><button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div>${FIREBASE_CONFIG.apiKey?"":`<div class="card" style="width:100%;margin-bottom:1rem"><b>Firebase isn't set up yet.</b> Phones can't join until you paste your Firebase config into <code>FIREBASE_CONFIG</code> near the top of index.html and commit it.</div>`}<div id="panel"></div><div id="body"></div>`;
+  <span id="tvind" class="mute"></span><button class="ghost" id="pb">${podium?"Hide podium":"Show final podium"}</button><button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div>${FIREBASE_CONFIG.apiKey?"":`<div class="card" style="width:100%;margin-bottom:1rem"><b>Firebase isn't set up yet.</b> Phones can't join until you paste your Firebase config into <code>FIREBASE_CONFIG</code> near the top of index.html and commit it.</div>`}${podium?podiumPreview():""}<div id="panel"></div><div id="body"></div>`;
   const b=$("#body");
   if(tab==="r1"||tab==="r2"){
     const R=D[tab];
@@ -370,11 +379,11 @@ function renderMain(){
   }else{b.innerHTML=editorHTML();bindEditor()}
   m.querySelectorAll("[data-tab]").forEach(x=>x.onclick=()=>{tab=x.dataset.tab;if(tab==="r1"||tab==="r2")round=tab;renderMain()});
   b.querySelectorAll(".tile:not(.used)").forEach(x=>x.onclick=()=>openClue(+x.dataset.c,+x.dataset.j));
-  $("#tvb").onclick=()=>window.open(location.pathname+"?tv","jeopardy-tv","popup,width=1280,height=720");
+  $("#tvb").onclick=()=>{const w=window.open(location.pathname+"?tv","jeopardy-tv","popup,width=1280,height=720");if(w){try{w.focus()}catch(e){}}};
   $("#pb").onclick=()=>{podium=!podium;renderMain()};
   $("#gb").onclick=()=>{started=!started;saveS();renderMain()};
   if($("#sf"))$("#sf").onclick=()=>{Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});started=true;saveS();phase="final";fin={stage:"cat"};cur=null;clearRound(true);push();renderMain()};
-  renderPanel();sync();
+  renderPanel();sync();updTv();
 }
 function openClue(c,j){
   cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={who:null,stage:"pick"};clearRound(true);
@@ -501,7 +510,8 @@ function podiumHTML(s){
 }
 function tvMode(){
   if(!bc){app.innerHTML=`<div class="center"><p>This browser can't link the TV window to the host console.</p></div>`;return}
-  bc.onmessage=e=>{if(e.data&&typeof e.data==="object"){TS=e.data;renderTV()}};
+  bc.onmessage=e=>{if(e.data&&e.data.cats){TS=e.data;renderTV()}};
+  setInterval(()=>bc.postMessage({ack:BUILD}),2000);
   renderTV();bc.postMessage("hello");
   document.addEventListener("keydown",e=>{if(e.key==="f")document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()});
 }
