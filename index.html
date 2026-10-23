@@ -107,7 +107,9 @@ button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
 <body>
 <div id="app"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 /* ===== SETTINGS =====
@@ -115,11 +117,15 @@ button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
  To change it: open the site, click "Make a new password hash" on the lock screen,
  paste the result below, commit. */
 const PASS_HASH="057ba03d6c44104863dc7361fe4578965d1887360f90a0895882e58a6248fc86";
-const PREFIX="clubjep-";
-/* Optional: add a TURN server here if phones still can't connect on some networks.
-   Example: {urls:"turn:your.turn.host:3478",username:"user",credential:"pass"} */
-const ICE=[{urls:"stun:stun.l.google.com:19302"},{urls:"stun:stun1.l.google.com:19302"}];
-const PEER_OPTS={config:{iceServers:ICE}};
+/* Paste your Firebase web-app config here (Project settings > Your apps > Web app).
+   It's safe to keep in a public repo as long as you publish the database rules from firebase-rules.json. */
+const FIREBASE_CONFIG={
+  apiKey:"",
+  authDomain:"",
+  databaseURL:"",
+  projectId:"",
+  appId:""
+};
 /* ==================== */
 
 const $=s=>document.querySelector(s), app=$("#app");
@@ -199,56 +205,83 @@ function hostInit(){
   if(!localStorage.jdata)fetch("questions.csv",{cache:"no-store"}).then(r=>r.ok?r.text():Promise.reject()).then(t=>{D=fromCSV(t);saveD();renderMain()}).catch(()=>{});
   startRoom();renderSide();renderMain();
 }
-let hostStatus="Connecting to server…",rt=null;
+let hostStatus="Connecting…",rt=null,fbdb,uid,R,L=[],hostReady=false,win=0,buzzSnap={},buzzList=[],settleT=null;
+const GRACE_MS=350; /* wait this long after the first buzz so a faster press that arrives late can still win */
+const newCode=()=>Math.random().toString(36).slice(2,7);
 const retry=ms=>{clearTimeout(rt);rt=setTimeout(startRoom,ms)};
+const byId=id=>Object.values(P).find(p=>p.id===id);
+const isMan=p=>!p.id||String(p.id).startsWith("man-");
 function setStatus(s){hostStatus=s;if($("#side"))renderSide()}
-function startRoom(){
-  room=localStorage.jroom||(localStorage.jroom=Math.random().toString(36).slice(2,6));
-  const old=peer;peer=null;if(old&&!old.destroyed)old.destroy();
-  hostStatus="Connecting to server…";
-  const me=peer=new Peer(PREFIX+room,PEER_OPTS);
-  me.on("open",()=>{if(peer!==me)return;tries=0;setStatus("ok")});
-  me.on("disconnected",()=>{if(peer!==me)return;setStatus("Lost the server connection. Reconnecting…");setTimeout(()=>{if(peer===me&&!me.destroyed)try{me.reconnect()}catch(e){retry(1000)}},1000)});
-  me.on("close",()=>{if(peer!==me)return;setStatus("Room closed. Retrying…");retry(2000)});
-  me.on("error",e=>{
-    if(peer!==me)return;
-    if(e.type==="unavailable-id"){
-      setStatus("Room code already in use. Is the host page open in another tab? Retrying…");
-      if(tries++<5)retry(2000);else{localStorage.jroom=Math.random().toString(36).slice(2,6);retry(500)}
-    }else{
-      setStatus("Problem: "+e.type+(["network","server-error","socket-error","socket-closed"].includes(e.type)?" (can't reach the PeerJS server). Retrying…":""));
-      console.warn(e);if(["network","server-error","socket-error","socket-closed"].includes(e.type))retry(5000);
-    }});
-  me.on("connection",c=>{
-    c.on("data",m=>onMsg(c,m));
-    c.on("close",()=>{const p=P[c.pname];if(p&&p.conn===c){p.online=false;renderSide();sync()}});
-  });
+function lis(ref,evt,cb){ref.on(evt,cb);L.push([ref,evt,cb])}
+function detach(){L.forEach(([r,e,c])=>r.off(e,c));L=[];hostReady=false}
+async function startRoom(){
+  detach();clearTimeout(rt);
+  room=localStorage.jroom||(localStorage.jroom=newCode());
+  if(!FIREBASE_CONFIG.apiKey){setStatus("Firebase isn't set up yet (see FIREBASE_CONFIG in index.html)");return}
+  try{
+    setStatus("Connecting…");
+    if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+    uid=(await firebase.auth().signInAnonymously()).user.uid;
+    fbdb=firebase.database();R=fbdb.ref("rooms/"+room);
+    const hu=(await R.child("hostUid").once("value")).val();
+    if(hu&&hu!==uid){localStorage.jroom=newCode();return startRoom()}
+    if(!hu)await R.child("hostUid").set(uid);
+    const [ps,stt]=await Promise.all([R.child("players").once("value"),R.child("state").once("value")]);
+    win=(stt.val()&&stt.val().win)||0;
+    Object.entries(ps.val()||{}).forEach(([id,v])=>{const p=P[v.name]||(P[v.name]={name:v.name,online:false});p.id=id;p.score=v.score||0});
+    hostReady=true;
+    lis(fbdb.ref(".info/connected"),"value",s=>{if(s.val()){R.child("hostOnline").onDisconnect().remove();R.child("hostOnline").set(true);setStatus("ok")}else setStatus("Offline. Reconnecting…")});
+    lis(R.child("joins"),"child_added",s=>onJoin(s.key,s.val()));
+    lis(R.child("joins"),"child_changed",s=>onJoin(s.key,s.val()));
+    lis(R.child("presence"),"value",s=>{const o=s.val()||{};Object.values(P).forEach(p=>{if(p.id&&!isMan(p))p.online=!!o[p.id]});renderSide()});
+    lis(R.child("buzz"),"value",s=>{buzzSnap=s.val()||{};evalBuzz()});
+    lis(R.child("wagers"),"value",s=>applyWagers(s.val()||{}));
+    lis(R.child("answers"),"value",s=>applyAnswers(s.val()||{}));
+    saveS();push();renderSide();
+  }catch(e){console.warn(e);setStatus("Problem: "+(e.code||e.message)+". Retrying…");retry(5000)}
 }
-function onMsg(c,m){
-  if(m.t==="join"){
-    let n=String(m.name||"").trim().slice(0,16)||"Player",p=P[n];
-    if(locked&&!p){c.send({t:"denied"});setTimeout(()=>c.close(),300);return}
-    if(p&&p.online&&!m.rejoin){let i=2;while(P[n+i])i++;n+=i;p=null}
-    if(!p)p=P[n]={name:n,score:0};
-    p.conn=c;p.online=true;c.pname=n;c.send({t:"joined",name:n});push();renderSide();saveS();return;
-  }
-  const p=P[c.pname];if(!p)return;
-  if(m.t==="buzz"&&phase==="open"&&!out.has(p.name)){phase="buzzed";buzzer=p.name;push();renderSide();renderPanel()}
-  if(m.t==="wager"){
-    if(phase==="final"&&fin.stage==="cat")p.wager=Math.max(0,Math.min(Math.floor(+m.v)||0,Math.max(p.score,0)));
-    else if(phase==="dd"&&dd.stage==="wager"&&dd.who===p.name){p.wager=Math.max(0,Math.min(Math.floor(+m.v)||0,ddMax(p)));const w=$("#ddw");if(w)w.value=p.wager}
-    else return;
-    push();if(phase==="final")renderPanel();
-  }
-  if(m.t==="fans"&&phase==="final"&&fin.stage==="clue"){p.fans=String(m.v).slice(0,200);push();renderPanel()}
+function onJoin(pid,v){
+  if(!v||!v.name||byId(pid))return;
+  let n=String(v.name).trim().slice(0,16)||"Player",ex=P[n];
+  if(ex&&ex.online&&!isMan(ex)){let i=2;while(P[n+i])i++;n+=i;ex=null}
+  if(!ex&&locked){R.child("banned/"+pid).set("closed");return}
+  const p=ex||(P[n]={name:n,score:0});
+  p.id=pid;p.online=true;R.child("banned/"+pid).remove();
+  saveS();push();renderSide();
+}
+function applyWagers(o){
+  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(!p)return;v=Math.floor(+v)||0;
+    if(phase==="final"&&fin.stage==="cat")p.wager=Math.max(0,Math.min(v,Math.max(p.score,0)));
+    else if(phase==="dd"&&dd.stage==="wager"&&dd.who===p.name){p.wager=Math.max(0,Math.min(v,ddMax(p)));const w=$("#ddw");if(w)w.value=p.wager}});
+  if(phase==="final")renderPanel();
+}
+function applyAnswers(o){
+  if(phase!=="final"||fin.stage!=="clue")return;
+  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(p)p.fans=String(v).slice(0,200)});renderPanel();
 }
 const ddMax=p=>Math.max(p.score,cur?RV[cur.r]*5:0);
-function st(p){
-  let s=phase;if(phase==="open"&&out.has(p.name))s="out";if(phase==="buzzed"&&buzzer===p.name)s="you";
-  return {t:"s",s,buzzer,score:p.score,fin:fin.stage,cat:D.fin.cat,q:fin.stage==="clue"?D.fin.q:"",
-    max:phase==="dd"?ddMax(p):Math.max(p.score,0),wager:p.wager,ans:p.fans,dd:phase==="dd"?{who:dd.who,stage:dd.stage}:null};
+function computeBuzz(){
+  buzzList=Object.entries(buzzSnap||{}).map(([id,v])=>({p:byId(id),v})).filter(x=>x.p&&x.v&&x.v.w===win&&!out.has(x.p.name)).map(x=>({name:x.p.name,t:x.v.t})).sort((a,b)=>a.t-b.t);
 }
-function push(){Object.values(P).forEach(p=>{if(p.online&&p.conn&&p.conn.open)p.conn.send(st(p))});sync()}
+function evalBuzz(){
+  if(!cur||cur.dd||(phase!=="open"&&phase!=="buzzed"))return;
+  computeBuzz();
+  if(phase==="open"&&buzzList.length&&!settleT)settleT=setTimeout(()=>{settleT=null;if(phase!=="open")return;computeBuzz();if(!buzzList.length)return;buzzer=buzzList[0].name;phase="buzzed";push();renderSide();renderPanel()},GRACE_MS);
+  renderPanel();
+}
+function clearRound(all){
+  clearTimeout(settleT);settleT=null;buzzSnap={};buzzList=[];
+  if(hostReady){R.child("buzz").remove();if(all){R.child("wagers").remove();R.child("answers").remove()}}
+}
+function push(){
+  if(hostReady){
+    R.child("state").set({phase,win,buzzer:buzzer||null,out:[...out],fin:fin.stage||null,cat:D.fin.cat,q:fin.stage==="clue"?D.fin.q:"",
+      dd:phase==="dd"?{who:dd.who||null,stage:dd.stage}:null,ddTop:cur?RV[cur.r]*5:0}).catch(e=>console.warn(e));
+    const o={};Object.values(P).forEach(p=>{if(p.id&&!String(p.id).startsWith("man-"))o[p.id]={name:p.name,score:p.score};else if(p.id)o[p.id]={name:p.name,score:p.score}});
+    R.child("players").set(o).catch(e=>console.warn(e));
+  }
+  sync();
+}
 
 /* ----- TV sync ----- */
 function joinUrl(){return location.origin+location.pathname+"?room="+room}
@@ -284,21 +317,21 @@ function renderSide(){
   $("#qrbox").onclick=()=>{$("#ov").innerHTML=`<div style="position:fixed;inset:0;background:#fff;color:#000;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem"><div id="bq"></div><h2 style="font-size:2rem">Scan to join</h2><button class="primary" id="cq">Close</button></div>`;drawQR($("#bq"),Math.min(innerHeight*.6,innerWidth*.8));$("#cq").onclick=()=>$("#ov").innerHTML=""};
   const each=(a,f)=>$("#side").querySelectorAll(a).forEach(f);
   each("[data-sc]",b=>b.onclick=()=>{const n=b.dataset.sc,v=prompt("Score for "+n,P[n].score);if(v!==null&&v.trim()!==""&&!isNaN(+v)){P[n].score=+v;saveS();push();renderSide()}});
-  each("[data-rn]",b=>b.onclick=()=>{const o=b.dataset.rn,n=(prompt("New name for "+o,o)||"").trim().slice(0,16);if(!n||n===o||P[n])return;const p=P[o];delete P[o];p.name=n;P[n]=p;if(p.conn){p.conn.pname=n;if(p.conn.open)p.conn.send({t:"joined",name:n})}if(buzzer===o)buzzer=n;saveS();push();renderSide();renderPanel()});
+  each("[data-rn]",b=>b.onclick=()=>{const o=b.dataset.rn,n=(prompt("New name for "+o,o)||"").trim().slice(0,16);if(!n||n===o||P[n])return;const p=P[o];delete P[o];p.name=n;P[n]=p;if(buzzer===o)buzzer=n;if(dd.who===o)dd.who=n;if(out.has(o)){out.delete(o);out.add(n)}saveS();push();renderSide();renderPanel()});
   each("[data-rm]",b=>b.onclick=()=>{if(confirm("Remove "+b.dataset.rm+" from the lobby?"))kick(b.dataset.rm)});
-  $("#ap").onclick=()=>{const n=(prompt("Player or team name")||"").trim().slice(0,16);if(n&&!P[n]){P[n]={name:n,score:0,online:false};saveS();push();renderSide()}};
-  $("#rc").onclick=()=>{tries=0;setStatus("Reconnecting…");retry(0);toast("Reconnecting the room…")};
-  $("#nr").onclick=()=>{if(!confirm("Create a new room code? Everyone connected is disconnected and must scan the new QR code."))return;
-    Object.values(P).forEach(p=>{if(p.conn&&p.conn.open){try{p.conn.send({t:"closed"})}catch(e){}}});
-    P={};phase="idle";cur=null;buzzer=null;fin={stage:null};localStorage.jroom=Math.random().toString(36).slice(2,6);tries=0;saveS();renderMain();retry(0);setStatus("Connecting to server…");toast("New room code: "+localStorage.jroom)};
+  $("#ap").onclick=()=>{const n=(prompt("Player or team name")||"").trim().slice(0,16);if(n&&!P[n]){P[n]={id:"man-"+Math.random().toString(36).slice(2,8),name:n,score:0,online:false};saveS();push();renderSide()}};
+  $("#rc").onclick=()=>{startRoom();toast("Reconnecting the room…")};
+  $("#nr").onclick=async()=>{if(!confirm("Create a new room code? Everyone connected is disconnected and must scan the new QR code."))return;
+    try{if(hostReady)await R.child("state").set({phase:"closed",win:win+1})}catch(e){}
+    detach();P={};phase="idle";cur=null;buzzer=null;fin={stage:null};out=new Set();localStorage.jroom=newCode();saveS();renderMain();startRoom();toast("New room code: "+localStorage.jroom)};
   $("#lk").onclick=()=>{locked=!locked;renderSide()};
   $("#ro").onclick=()=>{const off=ps.filter(p=>!p.online);if(off.length&&confirm("Remove "+off.length+" offline player(s)? Their scores are lost."))off.forEach(p=>kick(p.name))};
-  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;saveS();push();renderSide();renderMain();toast("Game reset: scores zeroed, board cleared")}};
+  $("#ng").onclick=()=>{if(confirm("Reset all scores and used clues?")){U={r1:{},r2:{}};Object.values(P).forEach(p=>{p.score=0;delete p.wager;delete p.fans;delete p.result});phase="idle";fin={stage:null};cur=null;started=false;clearRound(true);saveS();push();renderSide();renderMain();toast("Game reset: scores zeroed, board cleared")}};
   sync();
 }
 function kick(n){
   const p=P[n];if(!p)return;
-  if(p.conn&&p.conn.open){p.conn.send({t:"kicked"});const c=p.conn;setTimeout(()=>c.close(),300)}
+  if(hostReady&&p.id&&!String(p.id).startsWith("man-")){R.child("banned/"+p.id).set("removed");R.child("joins/"+p.id).remove()}
   delete P[n];if(buzzer===n){buzzer=null;if(phase==="buzzed")phase="open"}
   if(dd.who===n){dd.who=null;dd.stage="pick"}
   saveS();push();renderSide();renderPanel();
@@ -308,7 +341,7 @@ function kick(n){
 function renderMain(){
   const m=$("#main"),tabs=[["r1","Round 1"],["r2","Round 2"],["fin","Final Jeopardy"],["edit","Editor"]];
   m.innerHTML=`<div class="bar">${tabs.map(([k,l])=>`<button class="${tab===k?"on":""}" data-tab="${k}">${l}</button>`).join("")}<span class="sp"></span>
-  <button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div><div id="panel"></div><div id="body"></div>`;
+  <button class="ghost" id="tvb">Open TV display</button><button class="${started?"ghost":"primary"}" id="gb">${started?"Back to lobby screen":"Start game"}</button></div>${FIREBASE_CONFIG.apiKey?"":`<div class="card" style="width:100%;margin-bottom:1rem"><b>Firebase isn't set up yet.</b> Phones can't join until you paste your Firebase config into <code>FIREBASE_CONFIG</code> near the top of index.html and commit it.</div>`}<div id="panel"></div><div id="body"></div>`;
   const b=$("#body");
   if(tab==="r1"||tab==="r2"){
     const R=D[tab];
@@ -322,23 +355,23 @@ function renderMain(){
   b.querySelectorAll(".tile:not(.used)").forEach(x=>x.onclick=()=>openClue(+x.dataset.c,+x.dataset.j));
   $("#tvb").onclick=()=>window.open(location.pathname+"?tv","jeopardy-tv","popup,width=1280,height=720");
   $("#gb").onclick=()=>{started=!started;saveS();renderMain()};
-  if($("#sf"))$("#sf").onclick=()=>{Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});started=true;saveS();phase="final";fin={stage:"cat"};cur=null;push();renderMain()};
+  if($("#sf"))$("#sf").onclick=()=>{Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});started=true;saveS();phase="final";fin={stage:"cat"};cur=null;clearRound(true);push();renderMain()};
   renderPanel();sync();
 }
 function openClue(c,j){
-  cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={who:null,stage:"pick"};
+  cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={who:null,stage:"pick"};clearRound(true);
   phase=cur.dd?"dd":"locked";started=true;saveS();push();renderPanel();renderMain();
 }
 function closeClue(used){
   if(used&&cur)U[cur.r][cur.c+"-"+cur.j]=1;
   if(cur&&dd.who&&P[dd.who])delete P[dd.who].wager;
-  cur=null;phase="idle";buzzer=null;saveS();push();renderSide();renderMain();
+  cur=null;phase="idle";buzzer=null;clearRound();saveS();push();renderSide();renderMain();
 }
 const curVal=()=>RV[cur.r]*(cur.j+1);
 function judge(name,ok){
   const p=P[name];if(!p)return;
   if(ok){p.score+=curVal();closeClue(true);return}
-  p.score-=curVal();out.add(name);buzzer=null;if(phase==="buzzed")phase="open";
+  p.score-=curVal();out.add(name);buzzer=null;if(phase==="buzzed"){win++;clearRound();phase="open"}
   saveS();push();renderSide();renderPanel();
 }
 function ddJudge(ok){const p=P[dd.who];if(!p)return;const w=Math.max(0,+$("#ddw").value||0);p.score+=ok?w:-w;closeClue(true)}
@@ -360,17 +393,18 @@ function renderPanel(){
     if(phase==="locked")mid=`<div class="ctl"><button class="primary" id="ob">Open buzzers</button></div>`;
     if(phase==="open")mid=`<div class="ctl"><span>Buzzers open…</span><button id="lb">Lock buzzers</button></div>`;
     if(phase==="buzzed")mid=`<div class="ctl"><span class="who">${esc(buzzer)}</span><button class="ok" id="ok">Correct +${val}</button><button class="bad" id="no">Incorrect −${val}</button></div>`;
+    if(buzzList.length)mid+=`<div class="mute">Buzz order: ${buzzList.map((b,i)=>esc(b.name)+(i?` (+${b.t-buzzList[0].t} ms)`:"")).join(" · ")}</div>`;
     mid+=`<div class="ctl"><span class="mute">Judge someone else:</span><select id="mp">${ps.map(p=>`<option>${esc(p.name)}</option>`).join("")}</select><button class="ok" id="mok">✓</button><button class="bad" id="mno">✗</button></div>`;
   }
   el.innerHTML=head+mid+foot;
   const on=(id,f)=>$(id)&&($(id).onclick=f);
-  on("#ob",()=>{phase="open";push();renderSide();renderPanel()});
-  on("#lb",()=>{phase="locked";push();renderPanel()});
+  on("#ob",()=>{clearRound();win++;phase="open";push();renderSide();renderPanel()});
+  on("#lb",()=>{clearTimeout(settleT);settleT=null;phase="locked";push();renderPanel()});
   on("#ok",()=>judge(buzzer,true));on("#no",()=>judge(buzzer,false));
   on("#mok",()=>judge($("#mp").value,true));on("#mno",()=>judge($("#mp").value,false));
   on("#sa",()=>{tvAns=!tvAns;renderPanel();sync()});
   on("#done",()=>closeClue(true));on("#back",()=>closeClue(false));
-  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{dd={who:b.dataset.pick,stage:"wager"};push();renderPanel()});
+  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{dd={who:b.dataset.pick,stage:"wager"};if(hostReady)R.child("wagers").remove();if(P[dd.who])delete P[dd.who].wager;push();renderPanel()});
   on("#ddshow",()=>{const p=P[dd.who];p.wager=Math.max(0,+$("#ddw").value||0);dd.stage="clue";push();renderPanel()});
   on("#ddok",()=>ddJudge(true));on("#ddno",()=>ddJudge(false));
   on("#ddre",()=>{dd={who:null,stage:"pick"};push();renderPanel()});
@@ -451,63 +485,73 @@ function renderTV(){
 
 /* ======================= PLAYER ======================= */
 function playerMode(code){
-  let name=localStorage.jname||"",conn,state={s:"idle"},dead=false;
-  const msgCard=(t,p)=>app.innerHTML=`<div class="center"><div class="card"><h1>${t}</h1><p>${p}</p></div></div>`;
-  const join=()=>{
-    app.innerHTML=`<div class="center"><form class="card" id="jf"><h1>Join the game</h1><label>Your name<input id="nm" maxlength="16" value="${esc(name)}" autofocus autocomplete="nickname"></label><button class="primary" style="width:100%">Join</button></form></div>`;
-    $("#jf").onsubmit=e=>{e.preventDefault();name=$("#nm").value.trim();if(!name)return;localStorage.jname=name;connect()};
-  };
-  let att=0;
-  const connect=()=>{
-    dead=false;app.innerHTML=`<div class="center"><p>Connecting…</p></div>`;
-    const pr=new Peer(PEER_OPTS);let opened=false,to;
-    const fail=why=>{if(dead||opened)return;clearTimeout(to);app.innerHTML=`<div class="center"><div class="card"><h1>Can't find the game</h1><p>${why}</p><button class="primary" id="rt">Try again</button></div></div>`;$("#rt").onclick=()=>{att=0;pr.destroy();connect()}};
-    pr.on("open",()=>{conn=pr.connect(PREFIX+code,{reliable:true});
-      to=setTimeout(()=>fail("Reached the server but couldn't open a direct line to the host. A network or VPN is probably blocking it. (timeout)"),20000);
-      conn.on("open",()=>{opened=true;att=0;clearTimeout(to);conn.send({t:"join",name,rejoin:!!localStorage.jjoined})});
-      conn.on("data",m=>{
-        if(m.t==="joined"){name=m.name;localStorage.jname=name;localStorage.jjoined="1";ui()}
-        if(m.t==="s"){state=m;ui()}
-        if(m.t==="kicked"){dead=true;localStorage.removeItem("jjoined");msgCard("You were removed","The host removed you from the game.")}
-        if(m.t==="closed"){dead=true;localStorage.removeItem("jjoined");msgCard("Room closed","The host started a new room. Scan the new QR code to join.")}
-        if(m.t==="denied"){dead=true;msgCard("Lobby is closed","The host isn't accepting new players right now.")}
-      });
-      conn.on("close",()=>{if(dead)return;app.innerHTML=`<div class="center"><p>Reconnecting…</p></div>`;setTimeout(()=>{pr.destroy();connect()},1500)});
-    });
-    pr.on("error",e=>{
-      if(e.type==="peer-unavailable"&&att++<3){clearTimeout(to);pr.destroy();setTimeout(connect,2000);return}
-      const m={"peer-unavailable":"The host's room isn't online. Check that the host page is open and unlocked, with \"Room online\" showing in the sidebar.",
-        "network":"Couldn't reach the connection server. Check your internet.","server-error":"Couldn't reach the connection server.","socket-error":"Couldn't reach the connection server.","socket-closed":"Couldn't reach the connection server.",
-        "webrtc":"Couldn't open a direct line to the host. A network or VPN may be blocking it."};
-      fail((m[e.type]||"Something went wrong.")+" ("+e.type+")");
-    });
-  };
+  const card=(t,p,btn,fn)=>{app.innerHTML=`<div class="center"><div class="card"><h1>${t}</h1><p>${p}</p>${btn?`<button class="primary" id="rb">${btn}</button>`:""}</div></div>`;if(btn)$("#rb").onclick=fn};
+  if(!FIREBASE_CONFIG.apiKey)return card("Game not set up","The host hasn't finished setting up this site yet.");
+  let name=localStorage.jname||"",uid,R,db,S={phase:"idle"},me=null,ban=null,hostOn=true,myW=null,myA=null,off=0,sent=-1,attached=false;
+  const TS=()=>firebase.database.ServerValue.TIMESTAMP;
   const wagerForm=(max,w)=>`<form id="wf"><label>Your wager (0–${max})<input id="wv" type="number" min="0" max="${max}" inputmode="numeric" value="${w??""}" required></label><button class="primary" style="width:100%;margin-top:.6rem">Lock in wager</button></form>${w!=null?`<p>Wager set: $${w}</p>`:""}`;
   const ui=()=>{
-    const s=state,top=`<div id="pinfo"><span>${esc(name)}</span><span>${money(s.score||0)}</span></div>`;
-    if(s.s==="final"||s.s==="dd"){
+    if(!R)return;
+    const kA=$("#av")&&$("#av").value,kW=$("#wv")&&$("#wv").value;
+    if(ban)return card(ban==="removed"?"You were removed":"Lobby is closed",ban==="removed"?"The host removed you from the game.":"The host isn't accepting new players right now.","Try joining again",()=>R.child("joins/"+uid).set({name,ts:TS()}));
+    if(S.phase==="closed")return card("Room closed","The host started a new room. Scan the new QR code to join.");
+    if(!me)return card("Joining…",hostOn?"Waiting for the host to let you in.":"The host page doesn't look like it's open yet. Hang tight.");
+    if(me.name!==name){name=me.name;localStorage.jname=name}
+    const score=me.score||0,top=`<div id="pinfo"><span>${esc(me.name)}</span><span>${money(score)}</span></div>`,warn=hostOn?"":`<div class="mute" style="text-align:center">The host looks offline…</div>`;
+    let s=S.phase;const outList=S.out||[];
+    if(s==="open"&&outList.includes(me.name))s="out";
+    if(s==="buzzed"&&S.buzzer===me.name)s="you";
+    if(s==="final"||s==="dd"){
       let body="";
-      if(s.s==="final"){
-        body=`<h1>Final Jeopardy</h1><p><b>${esc(s.cat)}</b></p>`+
-        (s.fin==="cat"?wagerForm(s.max,s.wager):"")+
-        (s.fin==="clue"?`<p>${esc(s.q)}</p><form id="af"><label>Your answer<input id="av" value="${esc(s.ans||"")}" maxlength="200" required></label><button class="primary" style="width:100%;margin-top:.6rem">Submit answer</button></form>${s.ans!=null?"<p>Submitted.</p>":""}`:"")+
-        (s.fin==="reveal"?"<p>Watch the main screen.</p>":"");
+      if(s==="final"){
+        body=`<h1>Final Jeopardy</h1><p><b>${esc(S.cat)}</b></p>`+
+        (S.fin==="cat"?wagerForm(Math.max(score,0),myW):"")+
+        (S.fin==="clue"?`<p>${esc(S.q)}</p><form id="af"><label>Your answer<input id="av" value="${esc(myA||"")}" maxlength="200" required></label><button class="primary" style="width:100%;margin-top:.6rem">Submit answer</button></form>${myA!=null?"<p>Submitted.</p>":""}`:"")+
+        (S.fin==="reveal"?"<p>Watch the main screen.</p>":"");
       }else{
-        const me=s.dd.who===name;
-        body=`<h1>Daily Double</h1>`+(s.dd.stage==="pick"?"<p>The host is choosing a player.</p>":s.dd.stage==="wager"?(me?wagerForm(s.max,s.wager):`<p>${esc(s.dd.who)} is wagering.</p>`):(me?"<p>Answer out loud. The host will judge it.</p>":`<p>${esc(s.dd.who)} is answering.</p>`));
+        const d=S.dd||{},meUp=d.who===me.name;
+        body=`<h1>Daily Double</h1>`+(d.stage==="pick"?"<p>The host is choosing a player.</p>":d.stage==="wager"?(meUp?wagerForm(Math.max(score,S.ddTop||0),myW):`<p>${esc(d.who)} is wagering.</p>`):(meUp?"<p>Answer out loud. The host will judge it.</p>":`<p>${esc(d.who)} is answering.</p>`));
       }
-      app.innerHTML=`<div id="player">${top}<div class="card" style="width:100%;max-width:none">${body}</div></div>`;
-      if($("#wf"))$("#wf").onsubmit=e=>{e.preventDefault();conn.send({t:"wager",v:$("#wv").value})};
-      if($("#af"))$("#af").onsubmit=e=>{e.preventDefault();conn.send({t:"fans",v:$("#av").value})};
+      app.innerHTML=`<div id="player">${top}<div class="card" style="width:100%;max-width:none">${body}</div>${warn}</div>`;
+      if($("#wv")&&kW)$("#wv").value=kW;if($("#av")&&kA)$("#av").value=kA;
+      if($("#wf"))$("#wf").onsubmit=e=>{e.preventDefault();R.child("wagers/"+uid).set(Math.max(0,Math.floor(+$("#wv").value)||0))};
+      if($("#af"))$("#af").onsubmit=e=>{e.preventDefault();R.child("answers/"+uid).set($("#av").value.slice(0,200))};
       return;
     }
-    const L={idle:"WAIT",locked:"WAIT",open:"BUZZ!",out:"OUT",buzzed:"WAIT",you:"YOU!"};
-    const msg={idle:"Waiting for the next clue",locked:"Hold on. Buzzers open soon.",open:"",out:"Locked out for this clue",buzzed:s.buzzer?esc(s.buzzer)+" buzzed in":"",you:"You buzzed in first. Answer out loud!"}[s.s]||"";
-    app.innerHTML=`<div id="player">${top}<button id="buzz" class="${s.s}" ${s.s==="open"?"":"disabled"}>${L[s.s]||"WAIT"}</button><div id="pmsg">${msg}</div></div>`;
-    const b=$("#buzz");
-    if(s.s==="open")b.onpointerdown=e=>{e.preventDefault();conn.send({t:"buzz"});if(navigator.vibrate)navigator.vibrate(60);b.disabled=true};
+    const mine=s==="open"&&sent===S.win;
+    const L={idle:"WAIT",locked:"WAIT",open:mine?"SENT":"BUZZ!",out:"OUT",buzzed:"WAIT",you:"YOU!"};
+    const msg={idle:"Waiting for the next clue",locked:"Hold on. Buzzers open soon.",open:mine?"Locked in. Waiting for the result…":"",out:"Locked out for this clue",buzzed:S.buzzer?esc(S.buzzer)+" buzzed in":"",you:"You buzzed in first. Answer out loud!"}[s]||"";
+    app.innerHTML=`<div id="player">${top}<button id="buzz" class="${s}" ${s==="open"&&!mine?"":"disabled"}>${L[s]||"WAIT"}</button><div id="pmsg">${msg}</div>${warn}</div>`;
+    if(s==="open"&&!mine)$("#buzz").onpointerdown=e=>{e.preventDefault();if(sent===S.win)return;sent=S.win;
+      R.child("buzz/"+uid).set({w:S.win,t:Date.now()+off}).catch(()=>{sent=-1;ui()});
+      if(navigator.vibrate)navigator.vibrate(60);ui()};
   };
-  name?connect():join();
+  const join=()=>{
+    app.innerHTML=`<div class="center"><form class="card" id="jf"><h1>Join the game</h1><label>Your name<input id="nm" maxlength="16" value="${esc(name)}" autofocus autocomplete="nickname"></label><button class="primary" style="width:100%">Join</button></form></div>`;
+    $("#jf").onsubmit=e=>{e.preventDefault();name=$("#nm").value.trim();if(!name)return;localStorage.jname=name;start()};
+  };
+  const start=async()=>{
+    card("Connecting…","");
+    try{
+      if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+      uid=(await firebase.auth().signInAnonymously()).user.uid;
+      db=firebase.database();R=db.ref("rooms/"+code);
+      if(!(await R.child("hostUid").once("value")).exists())return card("Room not found","Check the QR code, or ask the host for the current link.","Try again",start);
+      if(!attached){attached=true;
+        db.ref(".info/serverTimeOffset").on("value",s=>off=s.val()||0);
+        db.ref(".info/connected").on("value",s=>{if(s.val()){const pr=R.child("presence/"+uid);pr.onDisconnect().remove();pr.set(true)}});
+        R.child("state").on("value",s=>{S=s.val()||{phase:"idle"};ui()});
+        R.child("players/"+uid).on("value",s=>{me=s.val();ui()});
+        R.child("banned/"+uid).on("value",s=>{ban=s.val();ui()});
+        R.child("hostOnline").on("value",s=>{hostOn=!!s.val();ui()});
+        R.child("wagers/"+uid).on("value",s=>{myW=s.val();ui()});
+        R.child("answers/"+uid).on("value",s=>{myA=s.val();ui()});
+      }
+      await R.child("joins/"+uid).set({name,ts:TS()});
+      ui();
+    }catch(e){card("Can't connect",esc(e.code||e.message||"Unknown error"),"Try again",start)}
+  };
+  name?start():join();
 }
 
 /* ======================= ROUTER (must stay last) ======================= */
