@@ -15,10 +15,10 @@ h1,h2,h3,.serif{font-family:"Source Serif 4",Georgia,serif;font-weight:700;margi
 button,input,textarea,select{font:inherit;color:inherit}
 button{cursor:pointer;border:0;border-radius:6px;padding:.55em 1em;background:var(--b80);font-weight:600}
 button:hover:not(:disabled){filter:brightness(1.15)}
-:focus-visible{outline:3px solid var(--illum);outline-offset:2px}
+:focus-visible{outline:3px solid var(--fogl);outline-offset:2px}
 button.primary{background:var(--cardinal);box-shadow:inset 0 0 0 1px var(--cardinal-lt)}
 button.ok{background:var(--pa)}button.bad{background:var(--brick)}button.ghost{background:transparent;box-shadow:inset 0 0 0 1px var(--b70)}
-button.on{background:var(--fog);color:var(--black)}
+button.on{background:var(--cardinal);color:#fff;box-shadow:inset 0 0 0 2px var(--fogl)}
 input,textarea,select{background:var(--b90);border:1px solid var(--b70);border-radius:6px;padding:.5em .6em;width:100%}
 textarea{resize:vertical;min-height:3.2em}
 .hide{display:none!important}.mute{color:var(--fog);opacity:.75}
@@ -32,10 +32,10 @@ textarea{resize:vertical;min-height:3.2em}
 #side{padding:1rem;background:#242320;border-left:3px solid var(--cardinal)}
 .bar{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center}.bar .sp{flex:1}
 .board{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
-.cat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--black);min-height:62px;padding:.3rem;font:700 .95rem/1.1 "Source Serif 4",serif;border-radius:3px}
-.tile{position:relative;min-height:54px;background:var(--cardinal);color:var(--illum);font:700 1.5rem "Source Serif 4",serif;border-radius:3px;padding:0}
+.cat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--cardinal);min-height:62px;padding:.3rem;font:700 .95rem/1.1 "Source Serif 4",serif;border-radius:3px}
+.tile{position:relative;min-height:54px;background:var(--cardinal);color:#fff;font:700 1.5rem "Source Serif 4",serif;border-radius:3px;padding:0}
 .tile.used{background:var(--b90);color:transparent;cursor:default}
-.tile .star{position:absolute;top:2px;right:6px;font-size:.8rem;color:var(--poppy)}
+.tile .star{position:absolute;top:2px;right:6px;font-size:.8rem;color:#fff}
 #qrbox{background:#fff;padding:8px;border-radius:8px;width:max-content;margin:.5rem auto;cursor:zoom-in}
 .url{font-size:.8rem;opacity:.7;word-break:break-all;text-align:center}
 .pl{display:flex;align-items:center;gap:.3rem;padding:.35rem .2rem;border-bottom:1px solid var(--b90)}
@@ -43,58 +43,60 @@ textarea{resize:vertical;min-height:3.2em}
 .pl .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pl .n.off{opacity:.55}
 .pl button{padding:.2em .5em;background:transparent}
 .pl .s{box-shadow:inset 0 0 0 1px var(--b70);min-width:4.2em;font-variant-numeric:tabular-nums}
-#toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--illum);color:var(--black);padding:.6em 1.2em;border-radius:8px;font-weight:700;z-index:30;box-shadow:0 4px 16px #0008}
+#toast{position:fixed;left:50%;bottom:1.5rem;transform:translateX(-50%);background:var(--fogl);color:var(--cardinal);padding:.6em 1.2em;border-radius:8px;font-weight:700;z-index:30;box-shadow:0 4px 16px #0008}
 .stat{text-align:center;font-weight:600;margin:.3rem 0}.stat.good{color:var(--pv)}.stat.warn{color:var(--poppy)}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--pv);flex:none}.dot.off{background:var(--b70)}
 .mini{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0}.mini button{padding:.3em .7em;font-size:.85rem}
 #panel:not(:empty){background:var(--b90);border-left:6px solid var(--cardinal);border-radius:8px;padding:1rem 1.2rem;margin-bottom:1rem}
 .ph{display:flex;gap:.6rem;align-items:center;font-weight:700;margin-bottom:.4rem}
-.badge{background:var(--poppy);color:var(--black);border-radius:4px;padding:.05em .5em;font-size:.85rem}
+.badge{background:var(--cardinal-lt);color:#fff;border-radius:4px;padding:.05em .5em;font-size:.85rem}
 .pq{font:600 1.35rem/1.3 "Source Serif 4",serif;margin:.3rem 0}
-.pa{color:var(--illum);margin-bottom:.6rem}
+.pa{color:#fff;font-weight:600;margin-bottom:.6rem}
 .ctl{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-top:.6rem}
-.who{font:700 1.4rem "Source Serif 4",serif;background:var(--illum);color:var(--black);padding:.1em .6em;border-radius:6px}
+.who{font:700 1.4rem "Source Serif 4",serif;background:var(--cardinal);color:#fff;box-shadow:inset 0 0 0 2px var(--fogl);padding:.1em .6em;border-radius:6px}
 .ctl select{width:auto}.ctl input[type=number]{width:7em}
 table{border-collapse:collapse;margin-top:.6rem}td,th{padding:.35rem .8rem;text-align:left;border-bottom:1px solid var(--b80)}
 /* editor */
 .ed{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1rem}
 .ed .c{background:var(--b90);border-top:3px solid var(--cardinal);border-radius:8px;padding:.8rem}.ed .c>*+*{margin-top:.4rem}
-.ed input.nm{font:700 1rem "Source Serif 4",serif;color:var(--illum)}
+.ed input.nm{font:700 1rem "Source Serif 4",serif;color:var(--fogl)}
 .ed label{font-size:.85rem;opacity:.8}
+.fmtbar{position:sticky;top:0;z-index:5;background:var(--black);padding:.5rem 0;display:flex;gap:.5rem;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--b80);margin-bottom:.8rem}
+.fmtbar button{min-width:2.4em}#fpv{flex:1;min-width:220px;padding:.3rem .6rem;background:var(--b90);border-radius:6px;min-height:2em}
 .lrow{display:flex;justify-content:space-between;align-items:center}
 button.dd{padding:.15em .6em;font-size:.8rem;background:transparent;box-shadow:inset 0 0 0 1px var(--b70)}
-button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
+button.dd.on{background:var(--cardinal-lt);color:#fff;box-shadow:none}
 /* player */
 #player{min-height:100vh;display:flex;flex-direction:column;padding:1rem;gap:1rem}
 #buzz{flex:1;min-height:55vh;border-radius:24px;font:700 clamp(3rem,16vw,7rem) "Source Serif 4",serif;background:var(--b80);color:var(--fog);touch-action:manipulation}
 #buzz.open{background:var(--pv);color:var(--black);box-shadow:0 12px 0 var(--pa)}
 #buzz.open:active{transform:translateY(8px);box-shadow:0 4px 0 var(--pa)}
-#buzz.out{background:var(--brick);color:var(--fog)}#buzz.you{background:var(--illum);color:var(--black)}
+#buzz.out{background:var(--brick);color:var(--fog)}#buzz.you{background:var(--cardinal);color:#fff}
 #pinfo{display:flex;justify-content:space-between;font:700 1.3rem "Source Serif 4",serif}
 #pmsg{text-align:center;font-size:1.2rem;min-height:1.6em}
 /* TV */
-#tv{height:100vh;display:grid;grid-template-rows:1fr auto;overflow:hidden;cursor:none;background:var(--black)}
-.tvmain{padding:2.2vh 2vw 1.2vh;min-height:0;display:flex;flex-direction:column}
-.tvhead{font:600 min(2.2vw,3.6vh) "Source Serif 4",serif;color:var(--fog);margin-bottom:1.2vh;letter-spacing:.02em}
-.tvboard{flex:1;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:auto repeat(5,1fr);gap:.9vh .6vw;min-height:0}
-.tvcat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--black);padding:1.2vh .5vw;font:700 min(calc(12.6vw / var(--n,6)),3.8vh)/1.1 "Source Serif 4",serif;border-radius:.4vh}
-.tvtile{display:grid;place-items:center;background:var(--cardinal);color:var(--illum);font:700 min(calc(30vw / var(--n,6)),9vh) "Source Serif 4",serif;border-radius:.4vh}
-.tvtile.used{background:#3a3935;color:transparent}
-.tvbar{display:flex;align-items:center;gap:1.2vw;padding:1.4vh 2vw;background:#1f1e1b;border-top:.6vh solid var(--cardinal);min-height:16vh}
+#tv{height:100vh;display:grid;grid-template-rows:minmax(0,1fr) auto;overflow:hidden;cursor:none;background:#241212}
+.tvmain{padding:2vh 2vw 1.5vh;min-height:0;display:flex;flex-direction:column;overflow:hidden;border-top:1vh solid var(--cardinal)}
+.tvhead{font:600 min(2.2vw,3.6vh) "Source Serif 4",serif;color:var(--fog);margin-bottom:1vh;letter-spacing:.02em}
+.tvboard{flex:1;display:grid;grid-template-rows:auto repeat(5,minmax(0,1fr));gap:.9vh .6vw;min-height:0;container-type:size}
+.tvcat{display:grid;place-items:center;text-align:center;background:var(--fog);color:var(--cardinal);padding:1vh .4vw;font:700 min(calc(12.6vw / var(--n,6)),3.8vh)/1.1 "Source Serif 4",serif;font-size:min(calc(12.6cqw / var(--n,6)),4.2cqh);border-radius:.4vh;overflow:hidden;min-width:0}
+.tvtile{display:grid;place-items:center;min-height:0;min-width:0;overflow:hidden;background:var(--cardinal);color:#fff;font:700 min(calc(30vw / var(--n,6)),7vh) "Source Serif 4",serif;font-size:min(calc(28cqw / var(--n,6)),9cqh);border-radius:.4vh}
+.tvtile.used{background:#3a2a2a;color:transparent}.tvtile.used{background:#3a3935;color:transparent}
+.tvbar{display:flex;align-items:center;gap:1.2vw;padding:1.4vh 2vw;background:#1a0d0d;border-top:.6vh solid var(--cardinal);min-height:13vh}
 .chip{flex:1;min-width:0;background:var(--b90);border-radius:.8vh;padding:1.2vh 1vw;text-align:center}
-.chip.lead{background:var(--illum);color:var(--black)}
+.chip.lead{background:var(--cardinal);color:#fff;box-shadow:inset 0 0 0 .35vh var(--fogl)}
 .cn{display:block;font:600 min(1.7vw,3vh) "Source Sans 3",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cs{display:block;font:700 min(3vw,5.5vh) "Source Serif 4",serif}
 .chip.empty{background:none;opacity:.6;font-size:min(1.8vw,3vh)}
 .more{font:600 min(1.6vw,2.8vh) "Source Sans 3";opacity:.7}
 #tvqr{background:#fff;padding:.7vh;border-radius:.6vh;line-height:0;flex:none}
 .tvclue{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vh;text-align:center;padding:0 4vw}
-.tvclue .meta{font:600 min(2.4vw,4vh) "Source Serif 4",serif;color:var(--illum)}
+.tvclue .meta{font:600 min(2.4vw,4vh) "Source Serif 4",serif;color:var(--fog)}
 .tvclue .q{font:600 min(4.6vw,8vh)/1.25 "Source Serif 4",serif;max-width:88vw}
-.tvclue .a{font:700 min(3.6vw,6vh) "Source Serif 4",serif;color:var(--illum)}
+.tvclue .a{font:700 min(3.6vw,6vh) "Source Serif 4",serif;color:#fff}
 .tvclue .live{font:700 min(3vw,5vh) "Source Sans 3";padding:.6vh 2vw;border-radius:1vh;background:var(--pv);color:var(--black)}
-.tvclue .live.who{background:var(--illum);font:700 min(5vw,9vh) "Source Serif 4",serif}
-.splash{font:700 min(9vw,15vh) "Source Serif 4",serif;color:var(--poppy)}
+.tvclue .live.who{background:var(--cardinal);color:#fff;box-shadow:inset 0 0 0 .5vh var(--fogl);font:700 min(5vw,9vh) "Source Serif 4",serif}
+.splash{font:700 min(9vw,15vh) "Source Serif 4",serif;color:#fff;background:var(--cardinal);padding:.05em .45em;border-radius:1vh}
 .tvlobby{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.5vh;text-align:center}
 .tvlobby h1{font-size:min(5vw,9vh)}
 #tvqrbig{background:#fff;padding:1.4vh;border-radius:1vh;line-height:0}
@@ -105,7 +107,7 @@ button.dd.on{background:var(--poppy);color:var(--black);box-shadow:none}
 .runners{font:600 min(2vw,3.4vh) "Source Sans 3",sans-serif;color:var(--fog)}
 .podium{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:1.5vw;min-height:0;padding:0 6vw}
 .pod{flex:1;max-width:27vw;display:flex;flex-direction:column;align-items:center;padding-top:2vh;border-radius:1vh 1vh 0 0;text-align:center;overflow:hidden;color:var(--black)}
-.pod.p1{height:50vh;background:var(--illum)}.pod.p2{height:39vh;background:var(--fog)}.pod.p3{height:30vh;background:var(--poppy)}.pod.empty{background:none}
+.pod.p1{height:50vh;background:var(--cardinal);color:#fff}.pod.p2{height:39vh;background:var(--fog)}.pod.p3{height:30vh;background:#D2C295}.pod.empty{background:none}
 .pn{font:700 min(3vw,5.4vh) "Source Serif 4",serif;padding:0 1vw;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ps{font:700 min(3.6vw,6.5vh) "Source Serif 4",serif}
 .pr{margin-top:auto;padding-bottom:1.5vh;font:700 min(5vw,9vh) "Source Serif 4",serif;opacity:.55}
@@ -144,13 +146,18 @@ const $=s=>document.querySelector(s), app=$("#app");
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const sha=async t=>[...new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(t)))].map(b=>b.toString(16).padStart(2,"0")).join("");
 function toast(m){const t=document.createElement("div");t.id="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2800)}
+const fmt=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/__(.+?)__/g,"<u>$1</u>").replace(/\n/g,"<br>");
 const money=n=>(n<0?"−":"")+"$"+Math.abs(n);
 const bc="BroadcastChannel" in window?new BroadcastChannel("clubjep"):null;
 const RV={r1:100,r2:200};
-const BUILD="2026-10-22-podium2";
+const BUILD="2026-10-28-v3";
 const ordn=n=>n+((n%100>=11&&n%100<=13)?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
 
 /* ---------- data ---------- */
+/* Wager rules. A player may wager up to the larger of |their score| and these floors.
+   With 0, someone at -$600 may wager up to $600 (a correct answer brings them back to $0)
+   and someone at $0 can only wager $0. Raise a floor (e.g. 200) so low scorers can still bet. */
+const FINAL_FLOOR=0, DD_FLOOR=0;
 const MAXC=8;
 const mkCat=i=>({name:"Category "+(i+1),clues:Array.from({length:5},(_,j)=>({q:"Clue "+(j+1),a:"Answer "+(j+1)}))});
 const mk=()=>({dd:[],cats:Array.from({length:6},(_,i)=>mkCat(i))});
@@ -274,17 +281,19 @@ function onJoin(pid,v){
   p.id=pid;p.online=true;R.child("banned/"+pid).remove();
   saveS();push();renderSide();
 }
+const wmax=p=>Math.max(Math.abs(p.score),phase==="dd"?DD_FLOOR:FINAL_FLOOR);
+const panelBusy=()=>{const a=typeof document!=="undefined"&&document.activeElement;return !!(a&&a.closest&&a.closest("#panel")&&/^(INPUT|TEXTAREA)$/.test(a.tagName))};
 function applyWagers(o){
-  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(!p)return;v=Math.floor(+v)||0;
-    if(phase==="final"&&fin.stage==="cat")p.wager=Math.max(0,Math.min(v,Math.max(p.score,0)));
-    else if(phase==="dd"&&dd.stage==="wager"&&dd.who===p.name){p.wager=Math.max(0,Math.min(v,ddMax(p)));const w=$("#ddw");if(w)w.value=p.wager}});
-  if(phase==="final")renderPanel();
+  const open=(phase==="final"&&fin.stage==="cat")||(phase==="dd"&&dd.stage==="cat");
+  if(!open)return;
+  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(!p)return;v=Math.floor(+v)||0;p.wager=Math.max(0,Math.min(v,wmax(p)))});
+  if(!panelBusy())renderPanel();
 }
 function applyAnswers(o){
-  if(phase!=="final"||fin.stage!=="clue")return;
-  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(p)p.fans=String(v).slice(0,200)});renderPanel();
+  if(!((phase==="final"&&fin.stage==="clue")||(phase==="dd"&&dd.stage==="clue")))return;
+  Object.entries(o).forEach(([id,v])=>{const p=byId(id);if(p)p.fans=String(v).slice(0,200)});
+  if(!panelBusy())renderPanel();
 }
-const ddMax=p=>Math.max(p.score,cur?RV[cur.r]*5:0);
 function computeBuzz(){
   buzzList=Object.entries(buzzSnap||{}).map(([id,v])=>({p:byId(id),v})).filter(x=>x.p&&x.v&&x.v.w===win&&!out.has(x.p.name)).map(x=>({name:x.p.name,t:x.v.t})).sort((a,b)=>a.t-b.t);
   buzzList.forEach(b=>{b.d=b.t-buzzList[0].t;b.r=Math.max(0,b.t-openedAt)});
@@ -302,7 +311,7 @@ function clearRound(all){
 function push(){
   if(hostReady){
     R.child("state").set({phase,win,buzzer:buzzer||null,out:[...out],fin:fin.stage||null,cat:D.fin.cat,q:fin.stage==="clue"?D.fin.q:"",
-      dd:phase==="dd"?{who:dd.who||null,stage:dd.stage}:null,ddTop:cur?RV[cur.r]*5:0}).catch(e=>console.warn(e));
+      dd:phase==="dd"&&cur?{stage:dd.stage,cat:D[cur.r].cats[cur.c].name,q:dd.stage==="clue"?D[cur.r].cats[cur.c].clues[cur.j].q:""}:null}).catch(e=>console.warn(e));
     const o={};Object.values(P).forEach(p=>{if(p.id&&!String(p.id).startsWith("man-"))o[p.id]={name:p.name,score:p.score};else if(p.id)o[p.id]={name:p.name,score:p.score}});
     R.child("players").set(o).catch(e=>console.warn(e));
   }
@@ -318,7 +327,7 @@ function tvState(){
   return {started,url:joinUrl(),names:ps.map(p=>p.name),
     round,rname:round==="r1"?"Round 1":"Round 2",cats:R.cats.map(c=>c.name),used:U[round],vals:[1,2,3,4,5].map(j=>RV[round]*j),
     top:ps.slice(0,5).map(p=>({n:p.name,s:p.score})),more:Math.max(0,ps.length-5),phase,buzzer,podium,runners:phase==="buzzed"?buzzList.slice(1,4).map(b=>({n:b.name,d:b.d})):[],
-    cur:cur&&{cat:cat.name,val,dd:cur.dd,ddWho:dd.who,ddStage:dd.stage,q:(cur.dd&&dd.stage!=="clue")?"":cl.q,a:tvAns?cl.a:""},
+    cur:cur&&Object.assign({cat:cat.name,val,dd:cur.dd,ddStage:cur.dd?dd.stage:null,q:(cur.dd&&dd.stage==="cat")?"":cl.q,a:cur.dd?(dd.stage==="reveal"?cl.a:""):(tvAns?cl.a:"")},cur.dd?{nw:online.filter(p=>p.wager!=null).length,na:online.filter(p=>p.fans!=null).length,no:online.length,rows:dd.stage==="reveal"?ps.map(p=>({n:p.name,a:p.fans||"",w:p.wager||0,r:p.result||""})):[]}:{}),
     fin:phase==="final"?{stage:fin.stage,cat:D.fin.cat,q:fin.stage!=="cat"?D.fin.q:"",a:fin.stage==="reveal"?D.fin.a:"",
       nw:online.filter(p=>p.wager!=null).length,na:online.filter(p=>p.fans!=null).length,no:online.length,
       rows:fin.stage==="reveal"?ps.map(p=>({n:p.name,a:p.fans||"",w:p.wager||0,r:p.result||""})):[]}:null};
@@ -343,7 +352,7 @@ function renderSide(){
   $("#qrbox").onclick=()=>{$("#ov").innerHTML=`<div style="position:fixed;inset:0;background:#fff;color:#000;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem"><div id="bq"></div><h2 style="font-size:2rem">Scan to join</h2><button class="primary" id="cq">Close</button></div>`;drawQR($("#bq"),Math.min(innerHeight*.6,innerWidth*.8));$("#cq").onclick=()=>$("#ov").innerHTML=""};
   const each=(a,f)=>$("#side").querySelectorAll(a).forEach(f);
   each("[data-sc]",b=>b.onclick=()=>{const n=b.dataset.sc,v=prompt("Score for "+n,P[n].score);if(v!==null&&v.trim()!==""&&!isNaN(+v)){P[n].score=+v;saveS();push();renderSide()}});
-  each("[data-rn]",b=>b.onclick=()=>{const o=b.dataset.rn,n=(prompt("New name for "+o,o)||"").trim().slice(0,16);if(!n||n===o||P[n])return;const p=P[o];delete P[o];p.name=n;P[n]=p;if(buzzer===o)buzzer=n;if(dd.who===o)dd.who=n;if(out.has(o)){out.delete(o);out.add(n)}saveS();push();renderSide();renderPanel()});
+  each("[data-rn]",b=>b.onclick=()=>{const o=b.dataset.rn,n=(prompt("New name for "+o,o)||"").trim().slice(0,16);if(!n||n===o||P[n])return;const p=P[o];delete P[o];p.name=n;P[n]=p;if(buzzer===o)buzzer=n;if(out.has(o)){out.delete(o);out.add(n)}saveS();push();renderSide();renderPanel()});
   each("[data-rm]",b=>b.onclick=()=>{if(confirm("Remove "+b.dataset.rm+" from the lobby?"))kick(b.dataset.rm)});
   $("#ap").onclick=()=>{const n=(prompt("Player or team name")||"").trim().slice(0,16);if(n&&!P[n]){P[n]={id:"man-"+Math.random().toString(36).slice(2,8),name:n,score:0,online:false};saveS();push();renderSide()}};
   $("#rc").onclick=()=>{startRoom();toast("Reconnecting the room…")};
@@ -359,7 +368,6 @@ function kick(n){
   const p=P[n];if(!p)return;
   if(hostReady&&p.id&&!String(p.id).startsWith("man-")){R.child("banned/"+p.id).set("removed");R.child("joins/"+p.id).remove()}
   delete P[n];if(buzzer===n){buzzer=null;if(phase==="buzzed")phase="open"}
-  if(dd.who===n){dd.who=null;dd.stage="pick"}
   saveS();push();renderSide();renderPanel();
 }
 
@@ -371,7 +379,7 @@ function renderMain(){
   const b=$("#body");
   if(tab==="r1"||tab==="r2"){
     const R=D[tab];
-    b.innerHTML=`<div class="board" style="grid-template-columns:repeat(${R.cats.length},1fr)">${R.cats.map(c=>`<div class="cat">${esc(c.name)}</div>`).join("")}${
+    b.innerHTML=`<div class="board" style="grid-template-columns:repeat(${R.cats.length},1fr)">${R.cats.map(c=>`<div class="cat">${fmt(c.name)}</div>`).join("")}${
       [0,1,2,3,4].map(j=>R.cats.map((c,i)=>{const u=U[tab][i+"-"+j],star=R.dd.includes(i+"-"+j);return `<button class="tile ${u?"used":""}" data-c="${i}" data-j="${j}" ${u?"disabled":""}>$${RV[tab]*(j+1)}${star&&!u?'<span class="star" title="Daily Double (host only)">★</span>':""}</button>`}).join("")).join("")}</div>
     <p class="mute" style="margin-top:.8rem">Click a tile to open it. The ★ marks a Daily Double and only shows here, never on the TV.</p>`;
   }else if(tab==="fin"){
@@ -386,13 +394,15 @@ function renderMain(){
   renderPanel();sync();updTv();
 }
 function openClue(c,j){
-  cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={who:null,stage:"pick"};clearRound(true);
+  cur={r:tab,c,j,dd:D[tab].dd.includes(c+"-"+j)};round=tab;tvAns=false;buzzer=null;out=new Set();dd={stage:"cat"};clearRound(true);
+  if(cur.dd)Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});
   phase=cur.dd?"dd":"locked";started=true;podium=false;saveS();push();renderPanel();renderMain();
 }
 function closeClue(used){
   if(used&&cur)U[cur.r][cur.c+"-"+cur.j]=1;
-  if(cur&&dd.who&&P[dd.who])delete P[dd.who].wager;
-  cur=null;phase="idle";buzzer=null;clearRound();saveS();push();renderSide();renderMain();
+  const wasDD=!!(cur&&cur.dd);
+  if(wasDD)Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});
+  cur=null;phase="idle";buzzer=null;clearRound(wasDD);saveS();push();renderSide();renderMain();
 }
 const curVal=()=>RV[cur.r]*(cur.j+1);
 function judge(name,ok){
@@ -401,22 +411,16 @@ function judge(name,ok){
   p.score-=curVal();out.add(name);buzzer=null;if(phase==="buzzed"){win++;clearRound();openedAt=Date.now()+hostOff;phase="open"}
   saveS();push();renderSide();renderPanel();
 }
-function ddJudge(ok){const p=P[dd.who];if(!p)return;const w=Math.max(0,+$("#ddw").value||0);p.score+=ok?w:-w;closeClue(true)}
 
 function renderPanel(){
   const el=$("#panel");if(!el)return;
-  if(phase==="final")return panelFinal(el);
+  if(phase==="final"||(cur&&cur.dd))return panelGroup(el);
   if(!cur){el.innerHTML="";return}
   const cat=D[cur.r].cats[cur.c],cl=cat.clues[cur.j],val=curVal(),ps=Object.values(P);
-  const head=`<div class="ph"><span>${esc(cat.name)} · $${val}</span>${cur.dd?'<span class="badge">Daily Double</span>':""}</div><div class="pq">${esc(cl.q)}</div><div class="pa">Answer (host only): ${esc(cl.a)}</div>`;
+  const head=`<div class="ph"><span>${fmt(cat.name)} · $${val}</span>${cur.dd?'<span class="badge">Daily Double</span>':""}</div><div class="pq">${fmt(cl.q)}</div><div class="pa">Answer (host only): ${fmt(cl.a)}</div>`;
   const foot=`<div class="ctl"><button class="ghost" id="sa">${tvAns?"Hide answer on TV":"Show answer on TV"}</button><button class="ghost" id="done">Done (mark used)</button><button class="ghost" id="back">Back (keep unused)</button></div>`;
   let mid="";
-  if(cur.dd){
-    if(dd.stage==="pick")mid=`<div class="ctl"><span>Who gets the Daily Double?</span>${ps.map(p=>`<button data-pick="${esc(p.name)}">${esc(p.name)}</button>`).join("")||'<span class="mute">No players yet.</span>'}</div>`;
-    else{const p=P[dd.who];mid=`<div class="ctl"><span class="who">${esc(dd.who)}</span><label>Wager $<input id="ddw" type="number" min="0" value="${p&&p.wager!=null?p.wager:""}"></label>
-      ${dd.stage==="wager"?`<button class="primary" id="ddshow">Show clue on TV</button>`:`<button class="ok" id="ddok">Correct</button><button class="bad" id="ddno">Incorrect</button>`}<button class="ghost" id="ddre">Change player</button></div>
-      ${dd.stage==="wager"?'<p class="mute">The player can enter their wager on their phone, or type it here.</p>':""}`}
-  }else{
+  {
     if(phase==="locked")mid=`<div class="ctl"><button class="primary" id="ob">Open buzzers</button></div>`;
     if(phase==="open")mid=`<div class="ctl"><span>Buzzers open…</span><button id="lb">Lock buzzers</button></div>`;
     if(phase==="buzzed")mid=`<div class="ctl"><span class="who">${esc(buzzer)}</span><button class="ok" id="ok">Correct +${val}</button><button class="bad" id="no">Incorrect −${val}</button></div>`;
@@ -431,27 +435,40 @@ function renderPanel(){
   on("#mok",()=>judge($("#mp").value,true));on("#mno",()=>judge($("#mp").value,false));
   on("#sa",()=>{tvAns=!tvAns;renderPanel();sync()});
   on("#done",()=>closeClue(true));on("#back",()=>closeClue(false));
-  el.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{dd={who:b.dataset.pick,stage:"wager"};if(hostReady)R.child("wagers").remove();if(P[dd.who])delete P[dd.who].wager;push();renderPanel()});
-  on("#ddshow",()=>{const p=P[dd.who];p.wager=Math.max(0,+$("#ddw").value||0);dd.stage="clue";push();renderPanel()});
-  on("#ddok",()=>ddJudge(true));on("#ddno",()=>ddJudge(false));
-  on("#ddre",()=>{dd={who:null,stage:"pick"};push();renderPanel()});
 }
-function panelFinal(el){
-  const f=D.fin,ps=Object.values(P);let body="",ctl="";
-  if(fin.stage==="cat"){body=`<div class="pq">Category: ${esc(f.cat)}</div><table>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.wager!=null?"$"+p.wager:"…"}</td></tr>`).join("")}</table>`;ctl=`<button class="primary" id="n1">Show clue, collect answers</button>`}
-  if(fin.stage==="clue"){body=`<div class="pq">${esc(f.q)}</div><div class="pa">Answer: ${esc(f.a)}</div><table>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${p.fans!=null?"answered":"…"}</td></tr>`).join("")}</table>`;ctl=`<button class="primary" id="n2">Reveal answers on TV</button>`}
-  if(fin.stage==="reveal"){body=`<div class="pa">Answer: ${esc(f.a)}</div><table><tr><th>Player</th><th>Answer</th><th>Wager</th><th></th></tr>${ps.map(p=>`<tr><td>${esc(p.name)} (${money(p.score)})</td><td>${esc(p.fans||"(none)")}</td><td>$${p.wager||0}</td><td>${p.result?(p.result==="ok"?"✓ scored":"✗ scored"):`<button class="ok" data-r="${esc(p.name)}" data-v="1">✓</button> <button class="bad" data-r="${esc(p.name)}" data-v="-1">✗</button>`}</td></tr>`).join("")}</table>`}
-  el.innerHTML=`<div class="ph">Final Jeopardy</div>${body}<div class="ctl">${ctl}<button class="ghost" id="fx">Close final</button></div>`;
+function panelGroup(el){
+  const isF=phase==="final",G=isF?fin:dd,ps=Object.values(P).sort((a,b)=>b.score-a.score);
+  let cname,q,a;
+  if(isF){cname=D.fin.cat;q=D.fin.q;a=D.fin.a}
+  else{const c=D[cur.r].cats[cur.c],cl=c.clues[cur.j];cname=c.name;q=cl.q;a=cl.a}
+  let body="",ctl="";
+  if(G.stage==="cat"){
+    body=`<div class="pq">${fmt(cname)}</div><p class="mute">Everyone wagers on their phone. Max is the size of their score (never negative). You can type a wager for anyone without a phone.</p>
+    <table><tr><th>Player</th><th>Score</th><th>Max</th><th>Wager</th></tr>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>${money(p.score)}</td><td>$${wmax(p)}</td><td><input type="number" min="0" max="${wmax(p)}" data-wg="${esc(p.name)}" value="${p.wager??""}" style="width:7em"></td></tr>`).join("")}</table>`;
+    ctl=`<button class="primary" id="n1">Show clue, collect answers</button>`;
+  }
+  if(G.stage==="clue"){
+    body=`<div class="pq">${fmt(q)}</div><div class="pa">Answer (host only): ${fmt(a)}</div><table>${ps.map(p=>`<tr><td>${esc(p.name)}</td><td>$${p.wager||0}</td><td>${p.fans!=null?"answered":"…"}</td></tr>`).join("")}</table>`;
+    ctl=`<button class="primary" id="n2">Reveal answers on TV</button>`;
+  }
+  if(G.stage==="reveal"){
+    body=`<div class="pa">Answer: ${fmt(a)}</div><table><tr><th>Player</th><th>Answer</th><th>Wager</th><th></th></tr>${ps.map(p=>`<tr><td>${esc(p.name)} (${money(p.score)})</td><td>${esc(p.fans||"(none)")}</td><td>$${p.wager||0}</td><td>${p.result?(p.result==="ok"?"✓ scored":"✗ scored"):`<button class="ok" data-r="${esc(p.name)}" data-v="1">✓</button> <button class="bad" data-r="${esc(p.name)}" data-v="-1">✗</button>`}</td></tr>`).join("")}</table>`;
+    if(!isF)ctl=`<button class="primary" id="done">Done (mark used)</button>`;
+  }
+  ctl+=isF?`<button class="ghost" id="fx">Close final</button>`:`<button class="ghost" id="back">Back (keep unused)</button>`;
+  el.innerHTML=`<div class="ph"><span>${isF?"Final Jeopardy":"Daily Double · $"+curVal()}</span>${isF?"":'<span class="badge">everyone plays</span>'}</div>${body}<div class="ctl">${ctl}</div>`;
   const on=(id,fn)=>$(id)&&($(id).onclick=fn);
-  on("#n1",()=>{fin.stage="clue";push();renderPanel()});on("#n2",()=>{fin.stage="reveal";push();renderPanel()});
+  on("#n1",()=>{G.stage="clue";push();renderPanel()});on("#n2",()=>{G.stage="reveal";push();renderPanel()});
   on("#fx",()=>{phase="idle";fin={stage:null};push();renderPanel()});
+  on("#done",()=>closeClue(true));on("#back",()=>closeClue(false));
+  el.querySelectorAll("[data-wg]").forEach(x=>x.onchange=()=>{const p=P[x.dataset.wg];if(!p)return;p.wager=Math.max(0,Math.min(Math.floor(+x.value)||0,wmax(p)));x.value=p.wager;push()});
   el.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{const p=P[b.dataset.r],v=+b.dataset.v;p.score+=v*(p.wager||0);p.result=v>0?"ok":"no";saveS();renderSide();push();renderPanel()});
 }
 
 /* ----- editor ----- */
 function editorHTML(){
   const sub=[["r1","Round 1 ($100–$500)"],["r2","Round 2 ($200–$1000)"],["fin","Final"]];
-  let h=`<div class="bar">${sub.map(([k,l])=>`<button class="${etab===k?"on":""}" data-et="${k}">${l}</button>`).join("")}<span class="sp"></span>
+  let h=`<div class="fmtbar"><button data-mk="**" title="Bold (Ctrl+B)"><b>B</b></button><button data-mk="*" title="Italic (Ctrl+I)"><i>I</i></button><button data-mk="__" title="Underline (Ctrl+U)"><u>U</u></button><div id="fpv"><span class="mute">Click a field, select text, then use B / I / U (or Ctrl+B / I / U). Preview shows here.</span></div></div><div class="bar">${sub.map(([k,l])=>`<button class="${etab===k?"on":""}" data-et="${k}">${l}</button>`).join("")}<span class="sp"></span>
   <button class="ghost" id="ex">Export CSV</button><button class="ghost" id="im">Import CSV</button><button class="ghost" id="lq">Load questions.csv from site</button><input type="file" id="fi" accept=".csv,text/csv" class="hide"></div>
   <p class="mute" style="margin:-.4rem 0 1rem">Edits save automatically in this browser. Export a CSV to back them up or edit in a spreadsheet. Commit it to your repo as <b>questions.csv</b> to load it on any computer.</p>`;
   if(etab==="fin")return h+`<div class="ed"><div class="c"><label>Category</label><input data-k="fin" data-f="cat" value="${esc(D.fin.cat)}"><label>Clue</label><textarea data-k="fin" data-f="q">${esc(D.fin.q)}</textarea><label>Answer</label><input data-k="fin" data-f="a" value="${esc(D.fin.a)}"></div></div>`;
@@ -480,7 +497,16 @@ function setCols(k,n){
   saveD();renderMain();
 }
 function bindEditor(){
-  const b=$("#body");
+  const b=$("#body");let lastF=null;
+  const showPv=()=>{const p=$("#fpv");if(p&&lastF)p.innerHTML=lastF.value?fmt(lastF.value):'<span class="mute">(empty)</span>'};
+  const wrap=mk=>{const el=lastF;if(!el)return;const s=el.selectionStart,e=el.selectionEnd,v=el.value,sel=v.slice(s,e);
+    el.value=v.slice(0,s)+mk+sel+mk+v.slice(e);el.focus();
+    if(sel)el.setSelectionRange(s+mk.length,e+mk.length);else el.setSelectionRange(s+mk.length,s+mk.length);
+    el.dispatchEvent(new Event("input",{bubbles:true}));showPv()};
+  b.addEventListener("focusin",e=>{if(e.target.matches&&e.target.matches("textarea,input[data-k]")){lastF=e.target;showPv()}});
+  b.addEventListener("input",e=>{if(e.target===lastF)showPv()});
+  b.addEventListener("keydown",e=>{if((e.ctrlKey||e.metaKey)&&lastF&&e.target===lastF){const mk={b:"**",i:"*",u:"__"}[e.key.toLowerCase()];if(mk){e.preventDefault();wrap(mk)}}});
+  b.querySelectorAll("[data-mk]").forEach(x=>{x.onmousedown=e=>e.preventDefault();x.onclick=()=>wrap(x.dataset.mk)});
   b.oninput=e=>{const d=e.target.dataset;if(!d.k)return;
     if(d.k==="fin")D.fin[d.f]=e.target.value;
     else if(d.f==="name")D[d.k].cats[+d.c].name=e.target.value;
@@ -515,6 +541,7 @@ function tvMode(){
   renderTV();bc.postMessage("hello");
   document.addEventListener("keydown",e=>{if(e.key==="f")document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()});
 }
+const tvRows=rows=>`<table class="tvtbl">${rows.slice(0,8).map(r=>`<tr><td>${esc(r.n)}</td><td>${esc(r.a)||"(none)"}</td><td>${money(r.w)}</td><td>${r.r==="ok"?"✓":r.r==="no"?"✗":""}</td></tr>`).join("")}</table>${rows.length>8?`<div class="meta">+${rows.length-8} more</div>`:""}`;
 function renderTV(){
   const s=TS;
   if(!s){app.innerHTML=`<div id="tv"><div class="tvmain"><div class="tvlobby"><h1 class="serif">Waiting for the host console…</h1><p class="mute">Open the host page in another window on the same browser, then click "Open TV display". Press F here for full screen.</p></div></div></div>`;return}
@@ -528,22 +555,25 @@ function renderTV(){
   }else if(s.fin){
     const f=s.fin;
     main=`<div class="tvclue"><div class="meta">Final Jeopardy</div>
-    ${f.stage==="cat"?`<div class="splash" style="color:var(--illum);font-size:min(6vw,10vh)">${esc(f.cat)}</div><div class="meta">Enter your wager on your phone (${f.nw}/${f.no})</div>`:""}
-    ${f.stage==="clue"?`<div class="meta">${esc(f.cat)}</div><div class="q">${esc(f.q)}</div><div class="meta">Answers in: ${f.na}/${f.no}</div>`:""}
-    ${f.stage==="reveal"?`<div class="meta">${esc(f.cat)}</div><div class="a">${esc(f.a)}</div><table class="tvtbl">${f.rows.slice(0,8).map(r=>`<tr><td>${esc(r.n)}</td><td>${esc(r.a)||"(none)"}</td><td>${money(r.w)}</td><td>${r.r==="ok"?"✓":r.r==="no"?"✗":""}</td></tr>`).join("")}</table>`:""}</div>`;
+    ${f.stage==="cat"?`<div class="splash" style="font-size:min(6vw,10vh)">${fmt(f.cat)}</div><div class="meta">Everyone: place your wager on your phone (${f.nw}/${f.no})</div>`:""}
+    ${f.stage==="clue"?`<div class="meta">${fmt(f.cat)}</div><div class="q">${fmt(f.q)}</div><div class="meta">Answers in: ${f.na}/${f.no}</div>`:""}
+    ${f.stage==="reveal"?`<div class="meta">${fmt(f.cat)}</div><div class="a">${fmt(f.a)}</div>${tvRows(f.rows)}`:""}</div>`;
   }else if(s.cur){
     const c=s.cur;
-    if(c.dd&&c.ddStage!=="clue")main=`<div class="tvclue"><div class="splash">Daily Double</div><div class="meta">${esc(c.cat)}</div><div class="meta">${c.ddWho?esc(c.ddWho)+" is wagering…":"Selecting a player…"}</div></div>`;
-    else main=`<div class="tvclue"><div class="meta">${esc(c.cat)} · $${c.val}${c.dd?" · Daily Double":""}</div><div class="q">${esc(c.q)}</div>${c.a?`<div class="a">${esc(c.a)}</div>`:""}
-      ${!c.dd&&s.phase==="open"?`<div class="live">Buzzers open</div>`:""}${!c.dd&&s.phase==="buzzed"?`<div class="live who">${esc(s.buzzer)}</div>`+((s.runners||[]).length?`<div class="runners">${s.runners.map((r,i)=>["2nd","3rd","4th"][i]+" "+esc(r.n)+" +"+r.d+" ms").join("  ·  ")}</div>`:""):""}${c.dd?`<div class="meta">${esc(c.ddWho||"")}</div>`:""}</div>`;
+    if(c.dd){
+      main=`<div class="tvclue">`+(c.ddStage==="cat"?`<div class="splash">Daily Double</div><div class="meta">${fmt(c.cat)}</div><div class="meta">Everyone: place your wager on your phone (${c.nw}/${c.no})</div>`
+        :c.ddStage==="clue"?`<div class="meta">${fmt(c.cat)} · Daily Double</div><div class="q">${fmt(c.q)}</div><div class="meta">Answers in: ${c.na}/${c.no}</div>`
+        :`<div class="meta">${fmt(c.cat)} · Daily Double</div><div class="a">${fmt(c.a)}</div>${tvRows(c.rows||[])}`)+`</div>`;
+    }else main=`<div class="tvclue"><div class="meta">${fmt(c.cat)} · $${c.val}</div><div class="q">${fmt(c.q)}</div>${c.a?`<div class="a">${fmt(c.a)}</div>`:""}
+      ${s.phase==="open"?`<div class="live">Buzzers open</div>`:""}${s.phase==="buzzed"?`<div class="live who">${esc(s.buzzer)}</div>`+((s.runners||[]).length?`<div class="runners">${s.runners.map((r,i)=>["2nd","3rd","4th"][i]+" "+esc(r.n)+" +"+r.d+" ms").join("  ·  ")}</div>`:""):""}</div>`;
   }else{
-    main=`<div class="tvhead">${s.rname}</div><div class="tvboard" style="--n:${s.cats.length};grid-template-columns:repeat(${s.cats.length},1fr)">${s.cats.map(n=>`<div class="tvcat">${esc(n)}</div>`).join("")}${
+    main=`<div class="tvhead">${s.rname}</div><div class="tvboard" style="--n:${s.cats.length};grid-template-columns:repeat(${s.cats.length},minmax(0,1fr))">${s.cats.map(n=>`<div class="tvcat">${fmt(n)}</div>`).join("")}${
       [0,1,2,3,4].map(j=>s.cats.map((_,i)=>`<div class="tvtile ${s.used[i+"-"+j]?"used":""}">${s.used[i+"-"+j]?"":"$"+s.vals[j]}</div>`).join("")).join("")}</div>`;
   }
   const scorebar=bar?`<div class="tvbar">${s.top.length?s.top.map((t,i)=>`<div class="chip ${i===0&&t.s>0?"lead":""}"><span class="cn">${esc(t.n)}</span><span class="cs">${money(t.s)}</span></div>`).join(""):`<div class="chip empty">No players yet</div>`}${s.more?`<div class="more">+${s.more} more</div>`:""}<div id="tvqr" title="Scan to join"></div></div>`:"";
   app.innerHTML=`<div id="tv"><div class="tvmain">${main}</div>${scorebar}</div>`;
   const q=$("#tvqrbig")||$("#tvqr");
-  if(q)new QRCode(q,{text:s.url,width:big?Math.round(innerHeight*.42):Math.round(innerHeight*.12),height:big?Math.round(innerHeight*.42):Math.round(innerHeight*.12)});
+  if(q)new QRCode(q,{text:s.url,width:big?Math.round(innerHeight*.42):Math.round(innerHeight*.11),height:big?Math.round(innerHeight*.42):Math.round(innerHeight*.11)});
 }
 
 /* ======================= PLAYER ======================= */
@@ -552,7 +582,7 @@ function playerMode(code){
   if(!FIREBASE_CONFIG.apiKey)return card("Game not set up","The host hasn't finished setting up this site yet.");
   let name=localStorage.jname||"",uid,R,db,S={phase:"idle"},me=null,ban=null,hostOn=true,myW=null,myA=null,off=0,sent=-1,attached=false;
   const TS=()=>firebase.database.ServerValue.TIMESTAMP;
-  const wagerForm=(max,w)=>`<form id="wf"><label>Your wager (0–${max})<input id="wv" type="number" min="0" max="${max}" inputmode="numeric" value="${w??""}" required></label><button class="primary" style="width:100%;margin-top:.6rem">Lock in wager</button></form>${w!=null?`<p>Wager set: $${w}</p>`:""}`;
+  const wagerForm=(max,w,note)=>`${note||""}<form id="wf"><label>Your wager (0–${max})<input id="wv" type="number" min="0" max="${max}" inputmode="numeric" value="${w??""}" required></label><button class="primary" style="width:100%;margin-top:.6rem">Lock in wager</button></form>${w!=null?`<p>Wager set: $${w}</p>`:""}`;
   const ui=()=>{
     if(!R)return;
     const kA=$("#av")&&$("#av").value,kW=$("#wv")&&$("#wv").value;
@@ -565,19 +595,16 @@ function playerMode(code){
     if(s==="open"&&outList.includes(me.name))s="out";
     if(s==="buzzed"&&S.buzzer===me.name)s="you";
     if(s==="final"||s==="dd"){
-      let body="";
-      if(s==="final"){
-        body=`<h1>Final Jeopardy</h1><p><b>${esc(S.cat)}</b></p>`+
-        (S.fin==="cat"?wagerForm(Math.max(score,0),myW):"")+
-        (S.fin==="clue"?`<p>${esc(S.q)}</p><form id="af"><label>Your answer<input id="av" value="${esc(myA||"")}" maxlength="200" required></label><button class="primary" style="width:100%;margin-top:.6rem">Submit answer</button></form>${myA!=null?"<p>Submitted.</p>":""}`:"")+
-        (S.fin==="reveal"?"<p>Watch the main screen.</p>":"");
-      }else{
-        const d=S.dd||{},meUp=d.who===me.name;
-        body=`<h1>Daily Double</h1>`+(d.stage==="pick"?"<p>The host is choosing a player.</p>":d.stage==="wager"?(meUp?wagerForm(Math.max(score,S.ddTop||0),myW):`<p>${esc(d.who)} is wagering.</p>`):(meUp?"<p>Answer out loud. The host will judge it.</p>":`<p>${esc(d.who)} is answering.</p>`));
-      }
+      const isF=s==="final",d=S.dd||{},stage=isF?S.fin:d.stage,cat=isF?S.cat:d.cat,q=isF?S.q:d.q;
+      const max=Math.max(Math.abs(score),isF?FINAL_FLOOR:DD_FLOOR);
+      const note=score<0?`<p class="mute">You're at ${money(score)}, so you can wager up to ${money(max)}. A correct answer brings you back to $0.</p>`:"";
+      const body=`<h1>${isF?"Final Jeopardy":"Daily Double"}</h1><p><b>${fmt(cat)}</b></p>`+
+        (stage==="cat"?(isF?"":`<p class="mute">Everyone plays this one!</p>`)+wagerForm(max,myW,note):"")+
+        (stage==="clue"?`<p>${fmt(q)}</p><form id="af"><label>Your answer<input id="av" value="${esc(myA||"")}" maxlength="200" required></label><button class="primary" style="width:100%;margin-top:.6rem">Submit answer</button></form>${myA!=null?"<p>Submitted.</p>":""}`:"")+
+        (stage==="reveal"?"<p>Watch the main screen.</p>":"");
       app.innerHTML=`<div id="player">${top}<div class="card" style="width:100%;max-width:none">${body}</div>${warn}</div>`;
       if($("#wv")&&kW)$("#wv").value=kW;if($("#av")&&kA)$("#av").value=kA;
-      if($("#wf"))$("#wf").onsubmit=e=>{e.preventDefault();R.child("wagers/"+uid).set(Math.max(0,Math.floor(+$("#wv").value)||0))};
+      if($("#wf"))$("#wf").onsubmit=e=>{e.preventDefault();R.child("wagers/"+uid).set(Math.min(max,Math.max(0,Math.floor(+$("#wv").value)||0)))};
       if($("#af"))$("#af").onsubmit=e=>{e.preventDefault();R.child("answers/"+uid).set($("#av").value.slice(0,200))};
       return;
     }
