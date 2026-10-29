@@ -140,6 +140,12 @@ button.dd.on{background:var(--cardinal-lt);color:#fff;box-shadow:none}
 .tvresult.incorrect{background:var(--brick)}
 .tvresult .resultword{font:700 min(9vw,15vh)/1.05 "Source Serif 4",serif}
 .tvresult .resultname{font:600 min(3vw,5vh) "Source Sans 3",sans-serif}
+.tvresult .resultanswer{font:600 min(3.2vw,5.5vh)/1.25 "Source Serif 4",serif;max-width:80vw;overflow-wrap:anywhere}
+.tvanswer{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2.5vh;text-align:center;padding:2vh 4vw;min-height:0;overflow:hidden}
+.tvanswer .meta{font:600 min(2.4vw,4vh) "Source Serif 4",serif;color:var(--fog)}
+.tvanswer .q{font:600 min(4vw,7vh)/1.2 "Source Serif 4",serif;max-width:88vw;overflow-wrap:anywhere}
+.tvanswer .a{font:700 min(4.2vw,7.5vh)/1.2 "Source Serif 4",serif;color:var(--illum);max-width:88vw;overflow-wrap:anywhere}
+.tvanswer .label{font:700 min(2vw,3.5vh) "Source Sans 3",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--pv)}
 @keyframes judgeTransition{
   0%{opacity:0;transform:scale(.78)}
   18%{opacity:1;transform:scale(1.06)}
@@ -200,7 +206,7 @@ const fmt=s=>esc(s).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"
 const money=n=>(n<0?"−":"")+"$"+Math.abs(n);
 const bc="BroadcastChannel" in window?new BroadcastChannel("clubjep"):null;
 const RV={r1:100,r2:200};
-const BUILD="2026-10-28-v4";
+const BUILD="2026-10-29-v5-answer-screen";
 const ordn=n=>n+((n%100>=11&&n%100<=13)?"th":({1:"st",2:"nd",3:"rd"}[n%10]||"th"));
 
 /* ---------- data ---------- */
@@ -533,7 +539,7 @@ function tvState(){
     cur:cur&&Object.assign({
       cat:cat.name,val,dd:cur.dd,ddStage:cur.dd?dd.stage:null,
       q:(cur.dd&&dd.stage==="cat")?"":cl.q,
-      a:cur.dd?(dd.stage==="reveal"?cl.a:""):(tvAns?cl.a:"")
+      a:cur.dd?(dd.stage==="reveal"?cl.a:""):(tvAns||phase==="correct"||phase==="answer"?cl.a:"")
     },cur.dd?{
       nw:online.filter(p=>p.wager!=null).length,
       na:online.filter(p=>p.fans!=null).length,
@@ -715,7 +721,16 @@ function closeClue(used){
   if(used&&cur)U[cur.r][cur.c+"-"+cur.j]=1;
   const wasDD=!!(cur&&cur.dd);
   if(wasDD)Object.values(P).forEach(p=>{delete p.wager;delete p.fans;delete p.result});
-  cur=null;phase="idle";buzzer=null;clearRound(wasDD);saveS();push();renderSide();renderMain();
+  cur=null;phase="idle";buzzer=null;tvAns=false;clearRound(wasDD);saveS();push();renderSide();renderMain();
+}
+
+/* Keep the clue on the TV until the host explicitly advances. */
+function showClueAnswer(markUsed=true){
+  clearClueTimers();
+  if(!cur)return;
+  if(markUsed)U[cur.r][cur.c+"-"+cur.j]=1;
+  tvAns=true;buzzer=null;phase="answer";countdownValue=0;
+  saveS();push();renderSide();renderPanel();
 }
 
 const curVal=()=>RV[cur.r]*(cur.j+1);
@@ -724,7 +739,7 @@ const curVal=()=>RV[cur.r]*(cur.j+1);
    Incorrect answers then return to the same clue for a three-second countdown. */
 function judge(name,ok){
   const p=P[name];
-  if(!p||!cur||cur.dd||["correct","wrong","countdown"].includes(phase))return;
+  if(!p||!cur||cur.dd||["correct","wrong","countdown","answer"].includes(phase))return;
 
   const value=curVal();
   clearClueTimers();
@@ -735,7 +750,7 @@ function judge(name,ok){
     clearRound();saveS();push();renderSide();renderPanel();
     transitionTimer=setTimeout(()=>{
       transitionTimer=null;
-      if(cur&&phase==="correct")closeClue(true);
+      if(cur&&phase==="correct")showClueAnswer(true);
     },1500);
     return;
   }
@@ -762,13 +777,14 @@ function renderPanel(){
 
   const cat=D[cur.r].cats[cur.c],cl=cat.clues[cur.j],val=curVal(),ps=Object.values(P);
   const head=`<div class="ph"><span>${fmt(cat.name)} · $${val}</span>${cur.dd?'<span class="badge">Daily Double</span>':""}</div><div class="pq">${fmt(cl.q)}</div><div class="pa">Answer (host only): ${fmt(cl.a)}</div>`;
-  const foot=`<div class="ctl"><button class="ghost" id="sa">${tvAns?"Hide answer on TV":"Show answer on TV"}</button><button class="ghost" id="done">Done (mark used)</button><button class="ghost" id="back">Back (keep unused)</button></div>`;
+  const foot=["correct","answer"].includes(phase)?"":`<div class="ctl"><button class="ghost" id="sa">${tvAns?"Hide answer on TV":"Show answer on TV"}</button><button class="ghost" id="done">Done (mark used)</button><button class="ghost" id="back">Back (keep unused)</button></div>`;
   let mid="";
 
   if(phase==="locked")mid=`<div class="ctl"><button class="primary" id="ob">Open buzzers</button></div>`;
   if(phase==="open")mid=`<div class="ctl"><span>Buzzers open…</span><button id="lb">Lock buzzers</button></div>`;
   if(phase==="buzzed")mid=`<div class="ctl"><span class="who">${esc(buzzer)}</span><button class="ok" id="ok">Correct +${val}</button><button class="bad" id="no">Incorrect −${val}</button></div>`;
-  if(phase==="correct")mid=`<div class="ctl"><b>Correct — returning to the board after the transition.</b></div>`;
+  if(phase==="correct")mid=`<div class="ctl"><b>Correct — showing the answer after the success animation.</b></div>`;
+  if(phase==="answer")mid=`<div class="ctl"><b>Answer is displayed on the TV. Advance when everyone has read it.</b><button class="primary" id="advance">Return to board (mark used)</button></div>`;
   if(phase==="wrong")mid=`<div class="ctl"><b>Incorrect — transition playing.</b></div>`;
   if(phase==="countdown")mid=`<div class="ctl"><b>Buzzers reopen in ${countdownValue}…</b></div>`;
 
@@ -793,7 +809,8 @@ function renderPanel(){
   on("#mok",()=>judge($("#mp").value,true));
   on("#mno",()=>judge($("#mp").value,false));
   on("#sa",()=>{tvAns=!tvAns;renderPanel();sync()});
-  on("#done",()=>closeClue(true));
+  on("#done",()=>showClueAnswer(true));
+  on("#advance",()=>closeClue(false));
   on("#back",()=>closeClue(false));
 }
 
@@ -1025,9 +1042,12 @@ function renderTV(){
             ?`<div class="meta">${ddTitle}</div><div class="q">${fmt(c.q)}</div><div class="meta">Answers in: ${c.na}/${c.no}</div>`
             :`<div class="meta">${ddTitle}</div><div class="a">${fmt(c.a)}</div>${tvRows(c.rows||[])}`)+
         `</div>`;
-    }else if(s.phase==="correct"||s.phase==="wrong"){
-      const correct=s.phase==="correct";
-      main=`<div class="tvclue"><div class="tvresult ${correct?"correct":"incorrect"}"><div class="resultword">${correct?"Correct!":"Incorrect"}</div><div class="resultname">${esc(s.buzzer||"")}</div></div></div>`;
+    }else if(s.phase==="correct"){
+      main=`<div class="tvclue"><div class="tvresult correct"><div class="resultword">Correct!</div><div class="resultname">${esc(s.buzzer||"")}</div><div class="resultanswer">${fmt(c.a||"")}</div></div></div>`;
+    }else if(s.phase==="wrong"){
+      main=`<div class="tvclue"><div class="tvresult incorrect"><div class="resultword">Incorrect</div><div class="resultname">${esc(s.buzzer||"")}</div></div></div>`;
+    }else if(s.phase==="answer"){
+      main=`<div class="tvanswer"><div class="meta">${fmt(c.cat)} · $${c.val}</div><div class="q">${fmt(c.q)}</div><div class="label">Correct answer</div><div class="a">${fmt(c.a||"")}</div></div>`;
     }else{
       const runner=(s.runners||[])[0];
       main=`<div class="tvclue"><div class="meta">${fmt(c.cat)} · $${c.val}</div><div class="q">${fmt(c.q)}</div>${c.a?`<div class="a">${fmt(c.a)}</div>`:""}
@@ -1097,7 +1117,7 @@ function playerMode(code){
     }
 
     const mine=s==="open"&&sent===S.win;
-    const L={idle:"WAIT",locked:"WAIT",open:mine?"SENT":"BUZZ!",out:"OUT",buzzed:"WAIT",you:"YOU!",wrong:"WAIT",correct:"WAIT",countdown:"WAIT"};
+    const L={idle:"WAIT",locked:"WAIT",open:mine?"SENT":"BUZZ!",out:"OUT",buzzed:"WAIT",you:"YOU!",wrong:"WAIT",correct:"WAIT",answer:"WAIT",countdown:"WAIT"};
     const msg={
       idle:"Waiting for the next clue",
       locked:"Hold on. Buzzers open soon.",
@@ -1106,7 +1126,8 @@ function playerMode(code){
       buzzed:S.buzzer?esc(S.buzzer)+" buzzed in":"",
       you:"You buzzed in first. Answer out loud!",
       wrong:"Incorrect answer. Wait for the next buzz.",
-      correct:"Correct. Returning to the board…",
+      correct:"Correct! The answer is shown on the main screen.",
+      answer:"Answer revealed on the main screen.",
       countdown:`Buzzers reopen in ${S.countdown||1}…`
     }[s]||"";
 
